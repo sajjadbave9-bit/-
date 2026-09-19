@@ -358,6 +358,70 @@ const state = {
   fuelCardPin:null
 };
 
+/* ============================================================
+   PERSISTENT SAVE — keeps progress after closing/reopening the app
+   ============================================================ */
+const SAVE_KEY = "jadeh_atashin_save_v1";
+let savedRun = null;
+let lastSaveAt = 0;
+
+function saveGame(includeRun=true){
+  try{
+    const data = {
+      coins: state.coins,
+      best: state.best,
+      ownedCars: [...state.ownedCars],
+      selectedCar: state.selectedCar,
+      ownedColors: [...state.ownedColors],
+      selectedColor: state.selectedColor,
+      redeemedCodes: [...state.redeemedCodes],
+      weather: state.weather,
+      controlScheme: state.controlScheme,
+      soundOn: state.soundOn,
+      fuelCardPin: state.fuelCardPin,
+      run: includeRun && state.screen==="playing" ? {
+        distance: Math.round(distance),
+        coinsRun,
+        elapsed,
+        weather: state.weather
+      } : savedRun
+    };
+    localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+  }catch(e){}
+}
+
+function loadGame(){
+  try{
+    const raw = localStorage.getItem(SAVE_KEY);
+    if(!raw) return;
+    const d = JSON.parse(raw);
+    if(Number.isFinite(d.coins)) state.coins=d.coins;
+    if(Number.isFinite(d.best)) state.best=d.best;
+    if(Array.isArray(d.ownedCars)) state.ownedCars=new Set(d.ownedCars.map(Number));
+    if(Number.isFinite(d.selectedCar)) state.selectedCar=d.selectedCar;
+    if(Array.isArray(d.ownedColors)) state.ownedColors=new Set(d.ownedColors.map(Number));
+    if(Number.isFinite(d.selectedColor)) state.selectedColor=d.selectedColor;
+    if(Array.isArray(d.redeemedCodes)) state.redeemedCodes=new Set(d.redeemedCodes);
+    if(d.weather) state.weather=d.weather;
+    if(d.controlScheme) state.controlScheme=d.controlScheme;
+    if(typeof d.soundOn==="boolean") state.soundOn=d.soundOn;
+    if(d.fuelCardPin!==undefined) state.fuelCardPin=d.fuelCardPin;
+    savedRun = d.run || null;
+  }catch(e){}
+}
+
+function clearSavedRun(){
+  savedRun = null;
+  saveGame(false);
+}
+
+loadGame();
+
+window.addEventListener("beforeunload", ()=>saveGame(true));
+document.addEventListener("visibilitychange", ()=>{
+  if(document.hidden) saveGame(true);
+});
+
 const CARS = [
   { name:"سواری شهری",    price:0,    speed:1.00, desc:"همون ماشین همیشگی، قابل اعتماد" },
   { name:"کوپه‌ی اسپرت",   price:300,  speed:1.06, desc:"چابک‌تر توی پیچ‌ها" },
@@ -384,7 +448,7 @@ const COLORS = [
 /* گیفت‌کدها — هر کد فقط یک‌بار قابل استفاده است */
 const REDEEM_CODES = [
   { canon:"myket", reward:500, aliases:["مایکت","myket"] },
-  { canon:"sajad",  reward:1500, aliases:["سجاد","sajad"] },
+  { canon:"iran",  reward:500, aliases:["ایران","iran"] },
 ];
 function normalizeCode(s){
   return (s||"").trim().toLowerCase().replace(/ي/g,"ی").replace(/ك/g,"ک").replace(/\s+/g,"");
@@ -425,24 +489,31 @@ function showScreen(name){
   if(name==="online"){ screens.online.classList.remove("hidden"); }
   if(name==="playing"){ $("hudTop").classList.remove("hidden"); $("menuBtn").classList.remove("hidden"); applyControlSchemeUI(); }
 }
-function syncMenuStats(){ $("menuCoins").textContent=state.coins; }
+function syncMenuStats(){
+  $("menuCoins").textContent=state.coins;
+  $("playBtn").textContent = (savedRun && savedRun.distance>0) ? "ادامه بازی" : "شروع";
+}
 
 document.querySelectorAll(".modecard").forEach(c=>c.onclick=()=>{
   document.querySelectorAll(".modecard").forEach(x=>x.classList.remove("active"));
-  c.classList.add("active"); state.mode = c.dataset.mode;
+  c.classList.add("active"); state.mode = c.dataset.mode; saveGame(false);
   $("weatherPicker").style.display = state.mode==="solo" ? "flex" : "none";
 });
 document.querySelectorAll(".wcard").forEach(c=>c.onclick=()=>{
   document.querySelectorAll(".wcard").forEach(x=>x.classList.remove("active"));
-  c.classList.add("active"); state.weather = c.dataset.w;
+  c.classList.add("active"); state.weather = c.dataset.w; saveGame(false);
 });
 
 $("menuBtn").onclick = ()=> $("menuPanel").classList.toggle("hidden");
-$("schemeMobile").onclick = ()=>{ state.controlScheme="mobile"; $("schemeMobile").classList.add("active"); $("schemeComputer").classList.remove("active"); applyControlSchemeUI(); };
-$("schemeComputer").onclick = ()=>{ state.controlScheme="computer"; $("schemeComputer").classList.add("active"); $("schemeMobile").classList.remove("active"); applyControlSchemeUI(); };
-$("soundOn").onclick = ()=>{ state.soundOn=true; $("soundOn").classList.add("active"); $("soundOff").classList.remove("active"); };
-$("soundOff").onclick = ()=>{ state.soundOn=false; $("soundOff").classList.add("active"); $("soundOn").classList.remove("active"); };
-$("exitToMenu").onclick = ()=>{ $("menuPanel").classList.add("hidden"); cleanupConnection(); resetWorldEntities(); showScreen("menu"); };
+$("schemeMobile").onclick = ()=>{ state.controlScheme="mobile"; saveGame(false); $("schemeMobile").classList.add("active"); $("schemeComputer").classList.remove("active"); applyControlSchemeUI(); };
+$("schemeComputer").onclick = ()=>{ state.controlScheme="computer"; saveGame(false); $("schemeComputer").classList.add("active"); $("schemeMobile").classList.remove("active"); applyControlSchemeUI(); };
+$("soundOn").onclick = ()=>{ state.soundOn=true; saveGame(false); $("soundOn").classList.add("active"); $("soundOff").classList.remove("active"); };
+$("soundOff").onclick = ()=>{ state.soundOn=false; saveGame(false); $("soundOff").classList.add("active"); $("soundOn").classList.remove("active"); };
+$("exitToMenu").onclick = ()=>{
+  $("menuPanel").classList.add("hidden");
+  if(state.screen==="playing") saveGame(true);
+  cleanupConnection(); resetWorldEntities(); showScreen("menu");
+};
 
 function applyControlSchemeUI(){
   if(state.screen!=="playing") return;
@@ -511,13 +582,13 @@ function buyCar(i){
   const car = CARS[i];
   if(state.coins<car.price){ toast("سکه‌ت کافی نیست 🪙"); return; }
   state.coins -= car.price; state.ownedCars.add(i); state.selectedCar=i;
-  renderShop(); toast(car.name+" اضافه شد 🎉");
+  saveGame(false); renderShop(); toast(car.name+" اضافه شد 🎉");
 }
 function buyColor(i){
   const col = COLORS[i];
   if(state.coins<col.price){ toast("سکه‌ت کافی نیست 🪙"); return; }
   state.coins -= col.price; state.ownedColors.add(i); state.selectedColor=i;
-  renderShop(); toast(col.name+" اضافه شد 🎉");
+  saveGame(false); renderShop(); toast(col.name+" اضافه شد 🎉");
 }
 document.querySelectorAll(".tab").forEach(tab=>tab.onclick=()=>{
   document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active")); tab.classList.add("active");
@@ -535,6 +606,7 @@ $("redeemBtn").onclick = ()=>{
   if(state.redeemedCodes.has(match.canon)){ toast("این کد قبلاً استفاده شده"); return; }
   state.redeemedCodes.add(match.canon);
   state.coins += match.reward;
+  saveGame(false);
   $("redeemInput").value = "";
   renderShop();
   toast(match.reward+" سکه گرفتی 🎉");
@@ -548,7 +620,7 @@ $("shopBtnMenu").onclick = ()=>{ prevBeforeShop="menu"; showScreen("shop"); };
 $("shopBtnOver").onclick = ()=>{ prevBeforeShop="over"; showScreen("shop"); };
 $("shopBack").onclick = ()=> showScreen(prevBeforeShop);
 $("menuBtnOver").onclick = ()=> showScreen("menu");
-$("retryBtn").onclick = ()=> startGame();
+$("retryBtn").onclick = ()=>{ clearSavedRun(); startGame(); };
 $("playBtn").onclick = ()=>{ if(state.mode==="online") showScreen("online"); else startGame(); };
 $("onlineBack").onclick = ()=>{ cleanupConnection(); showScreen("menu"); };
 
@@ -1007,6 +1079,12 @@ function startGame(){
 
   laneIdx=1; carX=laneX(1); targetX=carX;
   speed=0; distance=0; coinsRun=0; elapsed=0; spawnTimer=0.4; coinTimer=0.8;
+  if(savedRun){
+    distance = Number(savedRun.distance)||0;
+    coinsRun = Number(savedRun.coinsRun)||0;
+    elapsed = Number(savedRun.elapsed)||0;
+    savedRun = null;
+  }
   nitro=100; nitroActive=false;
   fuelStopsUsed=0; needsFuel=false; nearStation=false;
   gasHeld=false; brakeHeld=false;
@@ -1066,6 +1144,7 @@ function togglePause(){
 function flashScreen(){ const f=$("flash"); f.style.transition="none"; f.style.opacity="0.55"; requestAnimationFrame(()=>{ f.style.transition="opacity .35s ease"; f.style.opacity="0"; }); }
 function finishGame(){
   state.coins += coinsRun; state.best = Math.max(state.best, Math.round(distance));
+  clearSavedRun(); saveGame(false);
   $("overScore").textContent = Math.round(distance)+" متر"; $("overCoins").textContent = coinsRun; $("overBest").textContent = state.best+" متر";
   $("overTitle").innerHTML = "برخورد <span>کردی!</span>";
   sfx.crash(); vibrate([100,50,100]); flashScreen(); resetWorldEntities();
@@ -1344,6 +1423,7 @@ function updateSolo(dt){
   $("hudCoins").textContent = state.coins+coinsRun;
   $("hudSpeed").textContent = Math.round(speed*3.6);
   $("nitroBtn").disabled = nitro<25;
+  if(performance.now()-lastSaveAt>2000){ saveGame(true); lastSaveAt=performance.now(); }
 }
 
 function updateOnline(dt){
