@@ -1,0 +1,1440 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>جاده‌ی آتشین 3D</title>
+<style>
+  :root{
+    --bg-deep:#0d0e14; --panel:#171821; --panel-2:#1e2029;
+    --amber:#ffb020; --ember:#ff5a4e; --mint:#37d6a7; --violet:#8b7cf6;
+    --ink:#f2f1ec; --ink-dim:#9a9ba6; --cyan:#3ce7ff;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;padding:0;height:100%;overflow:hidden;background:var(--bg-deep);color:var(--ink);
+    font-family:Vazirmatn,"Segoe UI",Tahoma,Arial,sans-serif; user-select:none;}
+  #app{position:relative;width:100%;height:100%;max-width:520px;margin:0 auto;background:#000;}
+  #threeHost{position:absolute; inset:0;}
+  #threeHost canvas{display:block; width:100%!important; height:100%!important; touch-action:none;}
+  .hidden{display:none!important;}
+
+  #topbar{position:absolute; top:0; left:0; right:0; padding:12px 14px; display:flex; justify-content:space-between; align-items:flex-start; z-index:15; pointer-events:none;}
+  .roundbtn{ pointer-events:auto; width:38px; height:38px; border-radius:12px; border:1px solid rgba(255,255,255,.1);
+    background:rgba(23,24,33,.8); backdrop-filter:blur(6px); color:var(--ink); font-size:16px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;}
+  .pill{background:rgba(23,24,33,.78); backdrop-filter:blur(6px); border:1px solid rgba(255,255,255,.08);
+    border-radius:14px; padding:7px 13px; font-weight:700; font-size:13.5px; display:flex; align-items:center; gap:6px; pointer-events:auto;}
+  .coin-dot{width:8px;height:8px;border-radius:50%;background:var(--amber); box-shadow:0 0 8px var(--amber);}
+  .gem-dot{width:8px;height:8px;background:var(--violet); transform:rotate(45deg); box-shadow:0 0 8px var(--violet);}
+  #hudTop{display:flex; flex-direction:column; gap:6px; align-items:flex-end;}
+
+  #sideControls{position:absolute; bottom:22px; left:14px; z-index:15; display:flex; flex-direction:column; gap:10px;}
+  #sideControls.right{ left:auto; right:14px; }
+  .ctlbtn{ width:52px; height:52px; border-radius:16px; border:1px solid rgba(255,255,255,.12);
+    background:rgba(23,24,33,.82); backdrop-filter:blur(6px); color:var(--ink); font-size:21px; cursor:pointer;
+    display:flex; align-items:center; justify-content:center;}
+  .ctlbtn.on{ background:var(--amber); color:#241900; }
+  .ctlbtn.nitro{ background:linear-gradient(180deg,#ff8a3d,#ff5a4e); color:#2a0e08; }
+  .ctlbtn.nitro:disabled{ opacity:.35; }
+
+  #kbHint{ position:absolute; bottom:20px; left:14px; z-index:15; background:rgba(23,24,33,.78); border:1px solid rgba(255,255,255,.08);
+    border-radius:14px; padding:10px 14px; font-size:11.5px; color:var(--ink-dim); line-height:2; }
+  #kbHint b{ color:var(--ink); }
+
+  #joyBase{ position:absolute; bottom:26px; left:20px; width:112px; height:112px; border-radius:50%;
+    background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.16); z-index:15; touch-action:none; }
+  #joyKnob{ position:absolute; width:48px; height:48px; border-radius:50%; background:rgba(255,176,32,.85);
+    top:32px; left:32px; pointer-events:none; }
+
+  #menuPanel{ position:absolute; top:58px; right:14px; z-index:30; width:230px;
+    background:var(--panel); border:1px solid rgba(255,255,255,.08); border-radius:18px; padding:14px;
+    box-shadow:0 14px 30px rgba(0,0,0,.4); }
+  #menuPanel h4{ margin:0 0 8px; font-size:12.5px; color:var(--ink-dim); font-weight:700; }
+  .choice2{ display:flex; gap:8px; margin-bottom:14px; }
+  .choice2 button{ flex:1; padding:10px 4px; border-radius:12px; border:1px solid rgba(255,255,255,.08);
+    background:var(--panel-2); color:var(--ink-dim); font-weight:700; font-size:12.5px; cursor:pointer; }
+  .choice2 button.active{ background:var(--amber); color:#241900; border-color:transparent; }
+  #menuPanel .exitbtn{ width:100%; padding:10px; border-radius:12px; border:none; background:var(--ember); color:#2a0705; font-weight:800; font-size:13px; cursor:pointer; }
+
+  .screen{ position:absolute; inset:0; z-index:20; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    padding:26px; gap:14px; text-align:center;
+    background:radial-gradient(ellipse at 50% 15%, rgba(139,124,246,.14), transparent 60%), var(--bg-deep);
+    overflow-y:auto; }
+  h1.title{ font-size:32px; font-weight:800; margin:0; line-height:1.2; }
+  h1.title span{ color:var(--amber); }
+  .subtitle{ color:var(--ink-dim); font-size:13.5px; margin-top:-6px; max-width:290px; line-height:1.7; }
+
+  .btn{ appearance:none; border:none; cursor:pointer; font-family:inherit; border-radius:16px; padding:15px 26px;
+    font-size:16px; font-weight:700; color:var(--bg-deep); background:var(--amber);
+    box-shadow:0 6px 0 #b9800f, 0 10px 18px rgba(255,176,32,.22); transition:transform .08s ease; width:230px; }
+  .btn:active{ transform:translateY(4px); box-shadow:0 2px 0 #b9800f; }
+  .btn.ghost{ background:var(--panel-2); color:var(--ink); box-shadow:0 6px 0 #0d0e14,0 8px 14px rgba(0,0,0,.3); border:1px solid rgba(255,255,255,.06); }
+  .btn.ghost:active{ box-shadow:0 2px 0 #0d0e14; }
+  .btn.small{ width:auto; padding:9px 16px; font-size:13px; border-radius:12px; }
+  .btn:disabled{ opacity:.4; cursor:not-allowed; }
+  .stack{ display:flex; flex-direction:column; gap:11px; align-items:center; }
+
+  .cards2{ display:grid; grid-template-columns:1fr 1fr; gap:10px; width:100%; max-width:340px; }
+  .modecard{ background:var(--panel); border:2px solid rgba(255,255,255,.06); border-radius:18px; padding:16px 10px;
+    cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:6px; }
+  .modecard .ico{ font-size:26px; }
+  .modecard .lbl{ font-size:13px; font-weight:700; }
+  .modecard .sub{ font-size:10.5px; color:var(--ink-dim); line-height:1.5; }
+  .modecard.active{ border-color:var(--amber); }
+
+  .weathergrid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; width:100%; max-width:340px; }
+  .wcard{ background:var(--panel); border:2px solid rgba(255,255,255,.06); border-radius:16px; padding:12px; cursor:pointer; }
+  .wcard .ico{ font-size:22px; }
+  .wcard .lbl{ font-size:12.5px; font-weight:700; margin-top:4px; }
+  .wcard.active{ border-color:var(--cyan); }
+
+  .statcard{ background:var(--panel); border:1px solid rgba(255,255,255,.06); border-radius:20px; padding:18px 24px; min-width:240px; width:100%; max-width:360px; }
+  .statrow{ display:flex; justify-content:space-between; padding:6px 0; font-size:14.5px; }
+  .statrow b{ color:var(--amber); font-size:16px; }
+  .statrow.divider{ border-top:1px solid rgba(255,255,255,.08); margin-top:4px; padding-top:11px; }
+
+  #shopScreen{ justify-content:flex-start; padding-top:96px;
+    background:
+      radial-gradient(circle at 18% 14%, rgba(255,255,255,.28) 0%, transparent 2%),
+      radial-gradient(circle at 68% 6%, rgba(255,255,255,.2) 0%, transparent 1.6%),
+      radial-gradient(circle at 40% 52%, rgba(255,255,255,.32) 0%, transparent 2%),
+      radial-gradient(circle at 85% 58%, rgba(255,255,255,.22) 0%, transparent 1.6%),
+      radial-gradient(circle at 12% 62%, rgba(255,255,255,.18) 0%, transparent 1.4%),
+      linear-gradient(180deg, #2c1c05 0%, #6e4a10 24%, #171821 50%, #0c2836 74%, #123a4d 100%);
+  }
+  .shop-credit{ font-size:13px; font-weight:800; text-align:center; color:var(--amber);
+    text-shadow:0 0 12px rgba(255,176,32,.55); margin-bottom:8px; letter-spacing:.3px; }
+  .tabbar{ display:flex; gap:8px; margin-bottom:12px; }
+  .tab{ padding:9px 18px; border-radius:12px; font-size:13.5px; font-weight:700; cursor:pointer; background:var(--panel-2); color:var(--ink-dim); border:1px solid rgba(255,255,255,.05); }
+  .tab.active{ background:var(--amber); color:var(--bg-deep); }
+  .cardgrid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; width:100%; max-width:440px; }
+  .item{ background:var(--panel); border:1px solid rgba(255,255,255,.07); border-radius:18px; padding:13px; display:flex; flex-direction:column; align-items:center; gap:7px; position:relative;}
+  .item.owned{ outline:2px solid var(--mint); }
+  .item.selected::after{ content:"در حال استفاده"; position:absolute; top:8px; left:8px; background:var(--mint); color:#08201a; font-size:9.5px; font-weight:800; padding:3px 6px; border-radius:8px; }
+  .car-swatch{ width:58px; height:58px; display:flex; align-items:center; justify-content:center; }
+  .item .name{ font-size:13.5px; font-weight:700; }
+  .item .desc{ font-size:11px; color:var(--ink-dim); text-align:center; min-height:26px; line-height:1.5; }
+  .price{ display:flex; align-items:center; gap:5px; font-weight:800; font-size:13.5px; }
+  .gempack{ background:var(--panel); border:1px solid rgba(255,255,255,.07); border-radius:18px; padding:15px; display:flex; align-items:center; justify-content:space-between; width:100%; max-width:440px; }
+  .gempack + .gempack{ margin-top:10px; }
+  .gempack .left{ display:flex; align-items:center; gap:11px; }
+  .gempack .gicon{ font-size:24px; }
+  .gempack .glabel{ text-align:right; }
+  .gempack .glabel b{ display:block; font-size:14px; }
+  .gempack .glabel small{ color:var(--ink-dim); font-size:11.5px; }
+  .buybtn{ background:var(--violet); color:#fff; border:none; border-radius:12px; padding:9px 15px; font-weight:700; font-size:13px; cursor:pointer; }
+  .note{ font-size:10.5px; color:var(--ink-dim); max-width:420px; line-height:1.8; margin-top:6px; opacity:.75; }
+  .shop-topbar{ position:absolute; top:0; left:0; right:0; padding:12px 14px; display:flex; justify-content:space-between; align-items:center; background:linear-gradient(180deg,var(--bg-deep) 60%,transparent); z-index:22; }
+
+  #onlineScreen{ justify-content:flex-start; padding-top:60px; }
+
+  #toast{ position:absolute; bottom:26px; left:50%; transform:translateX(-50%) translateY(20px); background:var(--panel-2); border:1px solid rgba(255,255,255,.1); color:var(--ink); padding:11px 20px; border-radius:14px; font-size:13px; font-weight:700; opacity:0; transition:all .25s ease; z-index:60; pointer-events:none; white-space:nowrap; }
+  #toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+
+  #confirmModal{ position:absolute; inset:0; z-index:80; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.55); backdrop-filter:blur(3px); }
+  .modalcard{ background:var(--panel); border:1px solid rgba(255,255,255,.08); border-radius:20px; padding:22px; width:80%; max-width:310px; text-align:center; }
+  .modalcard p{ font-size:13px; color:var(--ink-dim); line-height:1.7; }
+  .modalbtns{ display:flex; gap:10px; margin-top:14px; }
+  .modalbtns .btn{ width:auto; flex:1; padding:11px; font-size:13.5px; }
+
+  #flash{ position:absolute; inset:0; background:#ff5a4e; opacity:0; pointer-events:none; z-index:50; }
+
+  #wheelControl{ width:78px; height:78px; border-radius:50%; background:rgba(23,24,33,.82); border:1px solid rgba(255,255,255,.14);
+    display:flex; align-items:center; justify-content:center; touch-action:none; box-shadow:0 6px 14px rgba(0,0,0,.3); }
+  #wheelSvg{ width:60px; height:60px; transition:transform .04s linear; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="threeHost"></div>
+  <div id="flash"></div>
+
+  <div id="topbar">
+    <button class="roundbtn hidden" id="menuBtn">☰</button>
+    <div id="hudTop" class="hidden">
+      <div class="pill"><span class="coin-dot"></span><span id="hudScore">0</span> متر</div>
+      <div class="pill"><span class="coin-dot"></span><span id="hudCoins">0</span></div>
+      <div class="pill"><span id="hudSpeed">0</span> km/h</div>
+    </div>
+  </div>
+
+  <div id="menuPanel" class="hidden">
+    <h4>روش کنترل</h4>
+    <div class="choice2">
+      <button id="schemeMobile" class="active">📱 موبایل</button>
+      <button id="schemeComputer">🖥️ کامپیوتر</button>
+    </div>
+    <h4>صدا</h4>
+    <div class="choice2">
+      <button id="soundOn" class="active">🔊 روشن</button>
+      <button id="soundOff">🔇 خاموش</button>
+    </div>
+    <button class="exitbtn" id="exitToMenu">خروج به منوی اصلی</button>
+  </div>
+
+  <div id="sideControls" class="hidden">
+    <button class="ctlbtn on" id="camBtn" title="تغییر دوربین">🎥</button>
+    <button class="ctlbtn on" id="lightBtn" title="چراغ">💡</button>
+    <button class="ctlbtn nitro" id="nitroBtn" title="نیترو">🔥</button>
+    <button class="ctlbtn" id="pauseBtn" title="مکث">⏸</button>
+  </div>
+  <div id="kbHint" class="hidden"></div>
+  <div id="joyBase" class="hidden"><div id="joyKnob"></div></div>
+
+  <!-- MANUAL DRIVE CONTROLS (solo/offline) -->
+  <div id="driveControls" class="hidden" style="position:absolute; bottom:20px; left:0; right:0; z-index:15; display:flex; justify-content:space-between; padding:0 14px; pointer-events:none;">
+    <div style="pointer-events:auto;">
+      <div id="wheelControl" title="فرمون">
+        <svg viewBox="0 0 100 100" id="wheelSvg">
+          <circle cx="50" cy="50" r="42" fill="none" stroke="#f2f1ec" stroke-width="8"/>
+          <circle cx="50" cy="50" r="10" fill="#ffb020"/>
+          <line x1="50" y1="8" x2="50" y2="30" stroke="#f2f1ec" stroke-width="8" stroke-linecap="round"/>
+          <line x1="14" y1="66" x2="34" y2="54" stroke="#f2f1ec" stroke-width="8" stroke-linecap="round"/>
+          <line x1="86" y1="66" x2="66" y2="54" stroke="#f2f1ec" stroke-width="8" stroke-linecap="round"/>
+        </svg>
+      </div>
+    </div>
+    <div style="display:flex; gap:10px; pointer-events:auto;">
+      <button class="ctlbtn" id="btnBrake" style="font-size:12.5px;">ترمز</button>
+      <button class="ctlbtn nitro" id="btnGas" style="font-size:12.5px;">گاز</button>
+    </div>
+  </div>
+  <button class="btn hidden" id="refuelBtn" style="position:absolute; bottom:88px; left:50%; transform:translateX(-50%); z-index:16; width:auto; padding:11px 20px;">⛽ زدن سوخت</button>
+
+  <!-- MAIN MENU -->
+  <div id="menuScreen" class="screen">
+    <h1 class="title">جاده‌ی <span>آتشین</span></h1>
+    <p class="subtitle">دوربینو عوض کن، چراغ‌ها رو بزن، آب‌وهوا رو انتخاب کن، یا با دوستت رو یه هات‌اسپات آنلاین بازی کن.</p>
+
+    <div class="cards2">
+      <div class="modecard active" data-mode="solo">
+        <div class="ico">🏎️</div>
+        <div class="lbl">تک‌نفره</div>
+        <div class="sub">مسیر بی‌پایان، انتخاب آب‌وهوا</div>
+      </div>
+      <div class="modecard" data-mode="online">
+        <div class="ico">🌐</div>
+        <div class="lbl">آنلاین</div>
+        <div class="sub">شهر آزاد بزرگ، با دوستت رو هات‌اسپات</div>
+      </div>
+    </div>
+
+    <div id="weatherPicker" class="stack" style="margin-top:2px">
+      <div style="font-size:12px;color:var(--ink-dim);font-weight:700">آب و هوا</div>
+      <div class="weathergrid">
+        <div class="wcard active" data-w="sunny"><div class="ico">☀️</div><div class="lbl">آفتابی</div></div>
+        <div class="wcard" data-w="rainy"><div class="ico">🌧️</div><div class="lbl">بارانی</div></div>
+        <div class="wcard" data-w="foggy"><div class="ico">🌫️</div><div class="lbl">مه‌آلود</div></div>
+        <div class="wcard" data-w="night"><div class="ico">🌙</div><div class="lbl">شب صاف</div></div>
+      </div>
+    </div>
+
+    <div class="stack" style="margin-top:6px">
+      <button class="btn" id="playBtn">شروع</button>
+      <button class="btn ghost" id="shopBtnMenu">فروشگاه</button>
+      <button class="btn ghost" id="fuelCardBtnMenu">کارت سوخت</button>
+    </div>
+    <div class="pill" style="margin-top:2px"><span class="coin-dot"></span><span id="menuCoins">0</span> سکه</div>
+  </div>
+
+  <!-- GAME OVER (solo only) -->
+  <div id="overScreen" class="screen hidden">
+    <h1 class="title" id="overTitle" style="font-size:28px">برخورد <span>کردی!</span></h1>
+    <div class="statcard">
+      <div class="statrow"><span>مسافت طی‌شده</span><b id="overScore">0 متر</b></div>
+      <div class="statrow"><span>سکه‌های این دور</span><b id="overCoins">0</b></div>
+      <div class="statrow divider"><span>رکورد شما</span><b id="overBest">0 متر</b></div>
+    </div>
+    <div class="stack">
+      <button class="btn" id="retryBtn">دوباره برون</button>
+      <button class="btn ghost" id="shopBtnOver">فروشگاه</button>
+      <button class="btn ghost" id="menuBtnOver">منوی اصلی</button>
+    </div>
+  </div>
+
+  <!-- SHOP -->
+  <div id="shopScreen" class="screen hidden">
+    <div class="shop-topbar">
+      <button class="roundbtn" id="shopBack">‹</button>
+      <div class="pill"><span class="coin-dot"></span><span id="shopCoins">0</span> سکه</div>
+    </div>
+    <div class="shop-credit">💎 با احترام از توسعه‌ی مایکت 👑</div>
+    <div class="tabbar">
+      <div class="tab active" data-tab="cars">ماشین‌ها</div>
+      <div class="tab" data-tab="colors">رنگ‌ها</div>
+      <div class="tab" data-tab="redeem">کد هدیه</div>
+    </div>
+    <div id="carsTab" class="cardgrid"></div>
+    <div id="colorsTab" class="cardgrid hidden"></div>
+    <div id="redeemTab" class="hidden stack" style="width:100%; max-width:340px;">
+      <div class="statcard" style="text-align:center;">
+        <div style="font-size:12.5px;color:var(--ink-dim);margin-bottom:10px">کد هدیه‌ت رو وارد کن:</div>
+        <input id="redeemInput" style="width:100%;text-align:center;font-size:18px;letter-spacing:2px;font-weight:700;border-radius:10px;background:var(--panel-2);color:var(--ink);border:1px solid rgba(255,255,255,.1);padding:12px;" placeholder="کد هدیه">
+        <button class="btn small" id="redeemBtn" style="margin-top:10px">دریافت جایزه</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ONLINE CONNECT SCREEN -->
+  <div id="onlineScreen" class="screen hidden">
+    <button class="roundbtn" id="onlineBack" style="position:absolute; top:12px; right:14px;">‹</button>
+    <h1 class="title" style="font-size:25px">بازی <span>آنلاین</span></h1>
+    <p class="subtitle">محلی: با دوستت رو یه هات‌اسپات/وای‌فای مشترک. جهانی: با هر کسی، از هر کشوری، خودکار.</p>
+
+    <div id="connModeChoose" class="stack">
+      <button class="btn" id="pickHotspotBtn">🏠 محلی (هات‌اسپات/وای‌فای)</button>
+      <button class="btn ghost" id="pickGlobalBtn">🌍 جهانی (با هرکسی)</button>
+    </div>
+
+    <div id="onlineChoose" class="hidden stack">
+      <button class="btn" id="hostCreateBtn">🟢 ساخت گروه (میزبان)</button>
+      <button class="btn ghost" id="guestJoinShowBtn">🔵 پیوستن به گروه (مهمان)</button>
+    </div>
+
+    <div id="hostPanel" class="hidden stack" style="width:100%; max-width:340px;">
+      <div class="statcard" style="text-align:center;">
+        <div style="font-size:12.5px;color:var(--ink-dim);margin-bottom:10px">این کد رو به دوستت بگو (یا براش بفرست):</div>
+        <div id="hostRoomCode" style="font-size:42px;font-weight:800;letter-spacing:8px;color:var(--amber)">----</div>
+      </div>
+      <div id="hostStatus" style="font-size:12.5px;color:var(--ink-dim)">در حال ساخت گروه...</div>
+      <button class="btn" id="hostStartBtn" disabled style="display:none">🚦 شروع بازی</button>
+    </div>
+
+    <div id="guestPanel" class="hidden stack" style="width:100%; max-width:340px;">
+      <div class="statcard">
+        <div style="font-size:12.5px;color:var(--ink-dim);margin-bottom:8px">کد گروهِ دوستت رو وارد کن:</div>
+        <input id="guestCodeInput" maxlength="4" style="width:100%;text-align:center;font-size:26px;letter-spacing:8px;font-weight:800;border-radius:10px;background:var(--panel-2);color:var(--ink);border:1px solid rgba(255,255,255,.1);padding:12px;text-transform:uppercase;" placeholder="----">
+        <button class="btn small" id="guestJoinBtn" style="margin-top:10px">پیوستن</button>
+      </div>
+      <div id="guestStatus" style="font-size:12.5px;color:var(--ink-dim)"></div>
+    </div>
+
+    <div id="globalPanel" class="hidden stack" style="width:100%; max-width:340px;">
+      <div class="statcard" style="text-align:center;">
+        <div style="font-size:36px;">🌍</div>
+        <div id="globalStatus" style="font-size:12.5px;color:var(--ink-dim);margin-top:8px;">در حال جستجوی حریف...</div>
+      </div>
+      <button class="btn" id="globalStartBtn" disabled style="display:none">🚦 شروع بازی</button>
+      <button class="btn ghost small" id="globalCancelBtn">لغو</button>
+    </div>
+  </div>
+
+  <div id="fuelModal" class="hidden" style="position:absolute; inset:0; z-index:80; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,.55); backdrop-filter:blur(3px);">
+    <div class="modalcard">
+      <div style="font-size:15px;font-weight:800;margin-bottom:6px" id="fuelModalTitle">کارت سوخت</div>
+      <p id="fuelModalBody" style="font-size:12.5px;color:var(--ink-dim);line-height:1.7;"></p>
+      <input id="fuelModalInput" type="tel" maxlength="4" placeholder="رمز ۴ رقمی" style="width:100%;text-align:center;font-size:20px;letter-spacing:8px;border-radius:10px;background:var(--panel-2);color:var(--ink);border:1px solid rgba(255,255,255,.1);padding:12px;margin-top:6px;">
+      <div class="modalbtns">
+        <button class="btn ghost" id="fuelModalCancel">انصراف</button>
+        <button class="btn" id="fuelModalOk">تایید</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast"></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/peerjs/1.5.5/peerjs.min.js"></script>
+<script>
+(function(){
+"use strict";
+const $ = id => document.getElementById(id);
+
+/* ============================================================
+   STATE (in-memory only — resets on reload)
+============================================================ */
+const state = {
+  coins:150, best:0,
+  ownedCars:new Set([0]), selectedCar:0,
+  ownedColors:new Set([0]), selectedColor:0,
+  redeemedCodes:new Set(),
+  screen:"menu",            // menu | playing | over | shop | online
+  mode:"solo",               // solo | online
+  weather:"sunny",
+  controlScheme:"mobile",    // mobile | computer
+  soundOn:true,
+  paused:false,
+  fuelCardPin:null
+};
+
+const CARS = [
+  { name:"سواری شهری",    price:0,    speed:1.00, desc:"همون ماشین همیشگی، قابل اعتماد" },
+  { name:"کوپه‌ی اسپرت",   price:300,  speed:1.06, desc:"چابک‌تر توی پیچ‌ها" },
+  { name:"هاچ‌بک تیز",     price:600,  speed:1.10, desc:"سبک و فرز، مناسب شهر" },
+  { name:"رالی تندرو",    price:1000, speed:1.16, desc:"سرعت بالا، مناسب جاده‌ی شلوغ" },
+  { name:"مسکنی مسابقه‌ای", price:1500, speed:1.20, desc:"ساخته‌شده برای مسابقه" },
+  { name:"سوپراسپرت",     price:2200, speed:1.24, desc:"یکی از سریع‌ترین‌ها" },
+  { name:"هایپرکار",      price:3200, speed:1.30, desc:"اوج سرعت و کنترل" },
+  { name:"افسانه‌ی جاده",   price:4500, speed:1.36, desc:"نسخه‌ی ویژه‌ی نهایی" },
+];
+const COLORS = [
+  { name:"آبی کلاسیک",   hex:0x4fa3ff, price:0,   glow:false },
+  { name:"قرمز آتشین",    hex:0xff5a4e, price:80,  glow:false },
+  { name:"زرد رالی",      hex:0xffcf3d, price:80,  glow:false },
+  { name:"نارنجی گرم",    hex:0xff8a3d, price:100, glow:false },
+  { name:"بنفش رویایی",   hex:0x8b7cf6, price:120, glow:false },
+  { name:"صورتی فسفری",   hex:0xff6fc9, price:150, glow:true  },
+  { name:"سبز نئون",      hex:0x37d6a7, price:150, glow:true  },
+  { name:"آبی یخی",       hex:0x3ce7ff, price:180, glow:true  },
+  { name:"نقره‌ای فلزی",   hex:0xd7dbe0, price:220, glow:false },
+  { name:"طلایی افسانه",  hex:0xf6c94a, price:350, glow:true  },
+];
+
+/* گیفت‌کدها — هر کد فقط یک‌بار قابل استفاده است */
+const REDEEM_CODES = [
+  { canon:"myket", reward:500, aliases:["مایکت","myket"] },
+  { canon:"iran",  reward:500, aliases:["ایران","iran"] },
+];
+function normalizeCode(s){
+  return (s||"").trim().toLowerCase().replace(/ي/g,"ی").replace(/ك/g,"ک").replace(/\s+/g,"");
+}
+
+/* ============================================================
+   AUDIO (procedural)
+============================================================ */
+let actx = null;
+function ac(){ if(!actx){ try{ actx = new (window.AudioContext||window.webkitAudioContext)(); }catch(e){} } return actx; }
+function beep(freq, dur, type, gain){
+  if(!state.soundOn) return;
+  const c = ac(); if(!c) return;
+  const o = c.createOscillator(), g = c.createGain();
+  o.type = type||"sine"; o.frequency.value = freq; g.gain.value = gain||0.08;
+  o.connect(g); g.connect(c.destination); o.start();
+  g.gain.exponentialRampToValueAtTime(0.001, c.currentTime+dur);
+  o.stop(c.currentTime+dur);
+}
+const sfx = { coin:()=>beep(880,0.12,"triangle",0.07), crash:()=>{beep(90,0.4,"sawtooth",0.14);beep(50,0.5,"square",0.1);}, nitro:()=>beep(220,0.3,"sawtooth",0.09), click:()=>beep(500,0.06,"square",0.05) };
+function vibrate(p){ try{ navigator.vibrate && navigator.vibrate(p); }catch(e){} }
+function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(toast._h); toast._h=setTimeout(()=>t.classList.remove("show"),1800); }
+
+/* ============================================================
+   SCREENS
+============================================================ */
+const screens = { menu:$("menuScreen"), over:$("overScreen"), shop:$("shopScreen"), online:$("onlineScreen") };
+function showScreen(name){
+  Object.values(screens).forEach(s=>s.classList.add("hidden"));
+  $("hudTop").classList.add("hidden"); $("menuBtn").classList.add("hidden");
+  $("sideControls").classList.add("hidden"); $("kbHint").classList.add("hidden"); $("joyBase").classList.add("hidden");
+  $("menuPanel").classList.add("hidden");
+  $("driveControls").classList.add("hidden"); $("refuelBtn").classList.add("hidden");
+  state.screen = name;
+  if(name==="menu"){ screens.menu.classList.remove("hidden"); syncMenuStats(); }
+  if(name==="over"){ screens.over.classList.remove("hidden"); }
+  if(name==="shop"){ screens.shop.classList.remove("hidden"); renderShop(); }
+  if(name==="online"){ screens.online.classList.remove("hidden"); }
+  if(name==="playing"){ $("hudTop").classList.remove("hidden"); $("menuBtn").classList.remove("hidden"); applyControlSchemeUI(); }
+}
+function syncMenuStats(){ $("menuCoins").textContent=state.coins; }
+
+document.querySelectorAll(".modecard").forEach(c=>c.onclick=()=>{
+  document.querySelectorAll(".modecard").forEach(x=>x.classList.remove("active"));
+  c.classList.add("active"); state.mode = c.dataset.mode;
+  $("weatherPicker").style.display = state.mode==="solo" ? "flex" : "none";
+});
+document.querySelectorAll(".wcard").forEach(c=>c.onclick=()=>{
+  document.querySelectorAll(".wcard").forEach(x=>x.classList.remove("active"));
+  c.classList.add("active"); state.weather = c.dataset.w;
+});
+
+$("menuBtn").onclick = ()=> $("menuPanel").classList.toggle("hidden");
+$("schemeMobile").onclick = ()=>{ state.controlScheme="mobile"; $("schemeMobile").classList.add("active"); $("schemeComputer").classList.remove("active"); applyControlSchemeUI(); };
+$("schemeComputer").onclick = ()=>{ state.controlScheme="computer"; $("schemeComputer").classList.add("active"); $("schemeMobile").classList.remove("active"); applyControlSchemeUI(); };
+$("soundOn").onclick = ()=>{ state.soundOn=true; $("soundOn").classList.add("active"); $("soundOff").classList.remove("active"); };
+$("soundOff").onclick = ()=>{ state.soundOn=false; $("soundOff").classList.add("active"); $("soundOn").classList.remove("active"); };
+$("exitToMenu").onclick = ()=>{ $("menuPanel").classList.add("hidden"); cleanupConnection(); resetWorldEntities(); showScreen("menu"); };
+
+function applyControlSchemeUI(){
+  if(state.screen!=="playing") return;
+  const mobile = state.controlScheme==="mobile";
+  const online = state.mode==="online";
+  $("sideControls").classList.toggle("hidden", !mobile);
+  $("sideControls").classList.toggle("right", online);
+  $("joyBase").classList.toggle("hidden", !(mobile&&online));
+  $("driveControls").classList.toggle("hidden", online);
+  $("kbHint").classList.toggle("hidden", mobile);
+  $("kbHint").innerHTML = online
+    ? `<div>حرکت: <b>W A S D</b> یا <b>جهت‌نما</b></div><div>دوربین: <b>C</b> &nbsp; چراغ: <b>L</b> &nbsp; نیترو: <b>Shift</b> &nbsp; مکث: <b>P</b></div>`
+    : `<div>گاز/ترمز: <b>↑ ↓</b> یا <b>W S</b> &nbsp; چپ/راست: <b>← →</b> یا <b>A D</b></div><div>دوربین: <b>C</b> &nbsp; چراغ: <b>L</b> &nbsp; نیترو: <b>Shift</b> &nbsp; مکث: <b>P</b></div>`;
+}
+
+/* ============================================================
+   SHOP
+============================================================ */
+function hexColor(n){ return "#"+n.toString(16).padStart(6,"0"); }
+function carSwatchSVG(color, glow){
+  return `<svg width="48" height="48" viewBox="0 0 52 52">
+    ${glow?`<defs><filter id="g"><feGaussianBlur stdDeviation="2.4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>`:""}
+    <g ${glow?'filter="url(#g)"':''} transform="rotate(90 26 26)">
+      <rect x="12" y="20" width="28" height="14" rx="5" fill="${color}"/>
+      <rect x="18" y="14" width="16" height="10" rx="4" fill="${color}" opacity=".7"/>
+      <circle cx="18" cy="36" r="3.4" fill="#1a1b22"/><circle cx="34" cy="36" r="3.4" fill="#1a1b22"/>
+    </g></svg>`;
+}
+function renderShop(){
+  $("shopCoins").textContent = state.coins;
+
+  const carGrid = $("carsTab"); carGrid.innerHTML = "";
+  CARS.forEach((car,i)=>{
+    const owned = state.ownedCars.has(i), selected = state.selectedCar===i;
+    const div = document.createElement("div");
+    div.className = "item"+(owned?" owned":"")+(selected?" selected":"");
+    div.innerHTML = `
+      <div class="car-swatch">${carSwatchSVG(hexColor(COLORS[state.selectedColor].hex), false)}</div>
+      <div class="name">${car.name}</div>
+      <div class="desc">${car.desc}</div>
+      ${owned
+        ? `<button class="btn small ${selected?'ghost':''}" data-select-car="${i}" ${selected?'disabled':''}>${selected?'انتخاب‌شده':'استفاده کن'}</button>`
+        : `<button class="btn small" data-buy-car="${i}"><span class="price">${car.price} 🪙</span></button>`}`;
+    carGrid.appendChild(div);
+  });
+  carGrid.querySelectorAll("[data-select-car]").forEach(b=>b.onclick=()=>{ state.selectedCar=parseInt(b.dataset.selectCar); renderShop(); });
+  carGrid.querySelectorAll("[data-buy-car]").forEach(b=>b.onclick=()=>buyCar(parseInt(b.dataset.buyCar)));
+
+  const colorGrid = $("colorsTab"); colorGrid.innerHTML = "";
+  COLORS.forEach((col,i)=>{
+    const owned = state.ownedColors.has(i), selected = state.selectedColor===i;
+    const div = document.createElement("div");
+    div.className = "item"+(owned?" owned":"")+(selected?" selected":"");
+    div.innerHTML = `
+      <div class="car-swatch">${carSwatchSVG(hexColor(col.hex), col.glow)}</div>
+      <div class="name">${col.name}</div>
+      ${owned
+        ? `<button class="btn small ${selected?'ghost':''}" data-select-color="${i}" ${selected?'disabled':''}>${selected?'انتخاب‌شده':'استفاده کن'}</button>`
+        : `<button class="btn small" data-buy-color="${i}"><span class="price">${col.price} 🪙</span></button>`}`;
+    colorGrid.appendChild(div);
+  });
+  colorGrid.querySelectorAll("[data-select-color]").forEach(b=>b.onclick=()=>{ state.selectedColor=parseInt(b.dataset.selectColor); renderShop(); });
+  colorGrid.querySelectorAll("[data-buy-color]").forEach(b=>b.onclick=()=>buyColor(parseInt(b.dataset.buyColor)));
+}
+function buyCar(i){
+  const car = CARS[i];
+  if(state.coins<car.price){ toast("سکه‌ت کافی نیست 🪙"); return; }
+  state.coins -= car.price; state.ownedCars.add(i); state.selectedCar=i;
+  renderShop(); toast(car.name+" اضافه شد 🎉");
+}
+function buyColor(i){
+  const col = COLORS[i];
+  if(state.coins<col.price){ toast("سکه‌ت کافی نیست 🪙"); return; }
+  state.coins -= col.price; state.ownedColors.add(i); state.selectedColor=i;
+  renderShop(); toast(col.name+" اضافه شد 🎉");
+}
+document.querySelectorAll(".tab").forEach(tab=>tab.onclick=()=>{
+  document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active")); tab.classList.add("active");
+  const which = tab.dataset.tab;
+  $("carsTab").classList.toggle("hidden", which!=="cars");
+  $("colorsTab").classList.toggle("hidden", which!=="colors");
+  $("redeemTab").classList.toggle("hidden", which!=="redeem");
+});
+$("redeemBtn").onclick = ()=>{
+  const raw = $("redeemInput").value;
+  const norm = normalizeCode(raw);
+  if(!norm){ toast("یه کد وارد کن"); return; }
+  const match = REDEEM_CODES.find(c=>c.aliases.some(a=>normalizeCode(a)===norm));
+  if(!match){ toast("کد معتبر نیست ❌"); return; }
+  if(state.redeemedCodes.has(match.canon)){ toast("این کد قبلاً استفاده شده"); return; }
+  state.redeemedCodes.add(match.canon);
+  state.coins += match.reward;
+  $("redeemInput").value = "";
+  renderShop();
+  toast(match.reward+" سکه گرفتی 🎉");
+};
+
+/* ============================================================
+   NAV
+============================================================ */
+let prevBeforeShop = "menu";
+$("shopBtnMenu").onclick = ()=>{ prevBeforeShop="menu"; showScreen("shop"); };
+$("shopBtnOver").onclick = ()=>{ prevBeforeShop="over"; showScreen("shop"); };
+$("shopBack").onclick = ()=> showScreen(prevBeforeShop);
+$("menuBtnOver").onclick = ()=> showScreen("menu");
+$("retryBtn").onclick = ()=> startGame();
+$("playBtn").onclick = ()=>{ if(state.mode==="online") showScreen("online"); else startGame(); };
+$("onlineBack").onclick = ()=>{ cleanupConnection(); showScreen("menu"); };
+
+/* ============================================================
+   THREE.JS SETUP
+============================================================ */
+const host = $("threeHost");
+let W=0,H=0;
+const renderer3d = new THREE.WebGLRenderer({ antialias:true, alpha:false });
+renderer3d.setPixelRatio(Math.min(2, window.devicePixelRatio||1));
+host.appendChild(renderer3d.domElement);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(62, 1, 0.1, 500);
+function resize(){ const rect=host.getBoundingClientRect(); W=rect.width; H=rect.height; renderer3d.setSize(W,H); camera.aspect=W/H; camera.updateProjectionMatrix(); }
+window.addEventListener("resize", resize);
+
+const hemi = new THREE.HemisphereLight(0xbcd4ff, 0x1a1a22, 0.9); scene.add(hemi);
+const sun = new THREE.DirectionalLight(0xffffff, 1.0); sun.position.set(-10,20,-10); scene.add(sun);
+
+/* shared car geometry */
+const geoBody = new THREE.BoxGeometry(1.7, 0.55, 3.4);
+const geoHood = new THREE.BoxGeometry(1.55, 0.3, 1.1);
+const geoCabin = new THREE.BoxGeometry(1.2, 0.42, 1.5);
+const geoWheel = new THREE.CylinderGeometry(0.33,0.33,0.34,12);
+const matWheel = new THREE.MeshStandardMaterial({ color:0x0d0e14, roughness:0.9 });
+const matGlass = new THREE.MeshStandardMaterial({ color:0x0d0e14, roughness:0.15, metalness:0.35, transparent:true, opacity:0.75 });
+
+function createCarMesh(colorHex, glow){
+  const g = new THREE.Group();
+  const bodyMat = new THREE.MeshStandardMaterial({ color:colorHex, roughness:0.32, metalness:0.3, emissive:glow?colorHex:0x000000, emissiveIntensity:glow?0.35:0 });
+  const body = new THREE.Mesh(geoBody, bodyMat); body.position.y=0.42; g.add(body);
+  const hood = new THREE.Mesh(geoHood, bodyMat); hood.position.set(0,0.62,1.25); g.add(hood);
+  const cabin = new THREE.Mesh(geoCabin, matGlass); cabin.position.set(0,0.78,-0.15); cabin.rotation.x=-0.05; g.add(cabin);
+  [[-0.9,0.32,1.15],[0.9,0.32,1.15],[-0.9,0.32,-1.15],[0.9,0.32,-1.15]].forEach(p=>{
+    const w = new THREE.Mesh(geoWheel, matWheel); w.rotation.z=Math.PI/2; w.position.set(p[0],p[1],p[2]); g.add(w);
+  });
+  const tailMat = new THREE.MeshBasicMaterial({ color:0xff3b3b });
+  const tailGeo = new THREE.BoxGeometry(0.28,0.14,0.06);
+  [-0.62,0.62].forEach(x=>{ const t=new THREE.Mesh(tailGeo,tailMat); t.position.set(x,0.5,1.72); g.add(t); });
+  return g;
+}
+
+/* ---- lane world (solo mode) wrapped in a group for easy show/hide ---- */
+const roadWorldGroup = new THREE.Group(); scene.add(roadWorldGroup);
+const LANE_W = 2.3, LANES = 3;
+const FREE_HALF_WIDTH = 3.5; // lets free-steering go a bit past the outer lane centers onto the shoulder
+function laneX(i){ return (i-1)*LANE_W; }
+function buildRoadTexture(){
+  const c=document.createElement("canvas"); c.width=256; c.height=512; const g=c.getContext("2d");
+  g.fillStyle="#26272f"; g.fillRect(0,0,256,512);
+  g.strokeStyle="rgba(255,255,255,.55)"; g.lineWidth=6; g.setLineDash([40,34]);
+  for(let i=1;i<LANES;i++){ const x=(256/LANES)*i; g.beginPath(); g.moveTo(x,0); g.lineTo(x,512); g.stroke(); }
+  g.setLineDash([]);
+  g.strokeStyle="rgba(255,176,32,.85)"; g.lineWidth=5;
+  g.beginPath(); g.moveTo(6,0); g.lineTo(6,512); g.moveTo(250,0); g.lineTo(250,512); g.stroke();
+  const tex = new THREE.CanvasTexture(c); tex.wrapS=THREE.RepeatWrapping; tex.wrapT=THREE.RepeatWrapping; tex.repeat.set(1,40);
+  return tex;
+}
+const roadTex = buildRoadTexture();
+const roadMat = new THREE.MeshStandardMaterial({ map:roadTex, roughness:0.85 });
+const roadMesh = new THREE.Mesh(new THREE.PlaneGeometry(LANE_W*LANES+0.6,800), roadMat);
+roadMesh.rotation.x=-Math.PI/2; roadMesh.position.z=-370; roadWorldGroup.add(roadMesh);
+const groundMesh = new THREE.Mesh(new THREE.PlaneGeometry(400,800), new THREE.MeshStandardMaterial({ color:0x141520, roughness:1 }));
+groundMesh.rotation.x=-Math.PI/2; groundMesh.position.set(0,-0.02,-370); roadWorldGroup.add(groundMesh);
+
+const buildings = []; const buildGeo = new THREE.BoxGeometry(1,1,1);
+(function makeBuildingSet(){
+  const colors=[0x2a2b39,0x333449,0x24324a,0x3a2740];
+  for(let side=-1; side<=1; side+=2){
+    for(let i=0;i<9;i++){
+      const h=2+Math.random()*7;
+      const mat=new THREE.MeshStandardMaterial({ color:colors[Math.floor(Math.random()*colors.length)], roughness:0.9 });
+      const m=new THREE.Mesh(buildGeo,mat);
+      m.scale.set(2.4+Math.random()*2, h, 2.4+Math.random()*2);
+      m.position.set(side*(9+Math.random()*5), h/2, -i*26-Math.random()*10);
+      roadWorldGroup.add(m); buildings.push(m);
+    }
+  }
+})();
+
+/* ---- traffic light: cycles red/green over the road to make obstacle traffic queue up in an orderly way ---- */
+const TL_CYCLE = { green:35, red:30 };
+let tlState = "green", tlTimer = TL_CYCLE.green;
+let trafficLight = null;
+function buildTrafficLight(){
+  const group = new THREE.Group();
+  const poleMat = new THREE.MeshStandardMaterial({ color:0x2a2c36, roughness:0.7 });
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.1,4.2,8), poleMat);
+  pole.position.set(-(LANE_W*LANES/2+0.3), 2.1, 0); group.add(pole);
+  const bar = new THREE.Mesh(new THREE.BoxGeometry(LANE_W*LANES+1.2,0.18,0.18), poleMat);
+  bar.position.set(0,4.1,0); group.add(bar);
+  const box = new THREE.Mesh(new THREE.BoxGeometry(0.5,1.1,0.4), new THREE.MeshStandardMaterial({ color:0x111318 }));
+  box.position.set(0,3.7,0); group.add(box);
+  const redMat = new THREE.MeshStandardMaterial({ color:0x330000, emissive:0xff3b3b, emissiveIntensity:0.12 });
+  const greenMat = new THREE.MeshStandardMaterial({ color:0x003300, emissive:0x37d6a7, emissiveIntensity:0.12 });
+  const redLight = new THREE.Mesh(new THREE.SphereGeometry(0.16,10,10), redMat); redLight.position.set(0,0.28,0.22); box.add(redLight);
+  const greenLight = new THREE.Mesh(new THREE.SphereGeometry(0.16,10,10), greenMat); greenLight.position.set(0,-0.28,0.22); box.add(greenLight);
+  group.position.set(0,0,-110);
+  roadWorldGroup.add(group);
+  trafficLight = { mesh:group, redLight, greenLight };
+  applyTrafficLightVisual();
+}
+function applyTrafficLightVisual(){
+  if(!trafficLight) return;
+  const isRed = tlState==="red";
+  trafficLight.redLight.material.emissiveIntensity = isRed?1.5:0.12;
+  trafficLight.greenLight.material.emissiveIntensity = isRed?0.12:1.5;
+}
+buildTrafficLight();
+
+const starCount=250; const starGeo=new THREE.BufferGeometry(); const starPos=new Float32Array(starCount*3);
+for(let i=0;i<starCount;i++){ starPos[i*3]=(Math.random()-0.5)*200; starPos[i*3+1]=Math.random()*60+10; starPos[i*3+2]=-Math.random()*380; }
+starGeo.setAttribute("position", new THREE.BufferAttribute(starPos,3));
+const stars = new THREE.Points(starGeo, new THREE.PointsMaterial({ color:0xffffff, size:0.6, transparent:true, opacity:0.9 }));
+stars.visible=false; roadWorldGroup.add(stars);
+
+const rainCount=220; const rainGeo=new THREE.BufferGeometry(); const rainPos=new Float32Array(rainCount*3);
+for(let i=0;i<rainCount;i++){ rainPos[i*3]=(Math.random()-0.5)*20; rainPos[i*3+1]=Math.random()*10; rainPos[i*3+2]=-Math.random()*40; }
+rainGeo.setAttribute("position", new THREE.BufferAttribute(rainPos,3));
+const rain = new THREE.Points(rainGeo, new THREE.PointsMaterial({ color:0xbcd8ff, size:0.12, transparent:true, opacity:0.65 }));
+rain.visible=false; roadWorldGroup.add(rain);
+
+/* ---- player, remote(online), headlights ---- */
+let playerCar = createCarMesh(COLORS[0].hex, COLORS[0].glow); scene.add(playerCar);
+const headlightL = new THREE.SpotLight(0xfff2cc,1.6,26,Math.PI/8,0.5);
+const headlightR = new THREE.SpotLight(0xfff2cc,1.6,26,Math.PI/8,0.5);
+const hlTargetL = new THREE.Object3D(); const hlTargetR = new THREE.Object3D();
+scene.add(headlightL, headlightR, hlTargetL, hlTargetR);
+headlightL.target=hlTargetL; headlightR.target=hlTargetR;
+let headlightsOn = true;
+
+let remoteCar = createCarMesh(0x3ce7ff, true); remoteCar.visible=false; scene.add(remoteCar);
+
+/* ---- lane-mode entity pools ---- */
+let obstacles=[], pickups=[], particles=[];
+function spawnObstacle(){
+  const lane=Math.floor(Math.random()*LANES);
+  const palette=[0xff5a4e,0xffcf3d,0x8b7cf6,0x4fa3ff];
+  const mesh=createCarMesh(palette[Math.floor(Math.random()*palette.length)],false);
+  mesh.position.set(laneX(lane),0,-75); scene.add(mesh);
+  obstacles.push({ mesh, lane, ownSpeed: 8+Math.random()*5, targetLaneX: laneX(lane), switchCooldown:0 });
+}
+function spawnCoinMesh(){
+  const geo=new THREE.TorusGeometry(0.34,0.13,8,16);
+  const mat=new THREE.MeshStandardMaterial({ color:0xffb020, emissive:0xffb020, emissiveIntensity:0.5, metalness:0.6, roughness:0.3 });
+  const mesh=new THREE.Mesh(geo,mat); mesh.rotation.x=Math.PI/2;
+  return mesh;
+}
+function spawnCoin(){
+  const lane=Math.floor(Math.random()*LANES);
+  const mesh=spawnCoinMesh(); mesh.position.set(laneX(lane),0.7,-75); scene.add(mesh);
+  pickups.push({ mesh, lane });
+}
+function spawnFuelStation(){
+  if(fuelStation){ scene.remove(fuelStation.mesh); fuelStation=null; }
+  const lane = Math.floor(Math.random()*LANES);
+  const group = new THREE.Group();
+  const canopy = new THREE.Mesh(new THREE.BoxGeometry(3.6,0.25,2.4), new THREE.MeshStandardMaterial({color:0xf2f1ec, emissive:0x333333}));
+  canopy.position.y = 2.7;
+  const poleMat = new THREE.MeshStandardMaterial({color:0x2a2c36});
+  const poleGeo = new THREE.CylinderGeometry(0.09,0.09,2.7,8);
+  const p1 = new THREE.Mesh(poleGeo,poleMat); p1.position.set(-1.5,1.35,-0.9);
+  const p2 = new THREE.Mesh(poleGeo,poleMat); p2.position.set(1.5,1.35,-0.9);
+  const pump = new THREE.Mesh(new THREE.BoxGeometry(0.6,1.3,0.5), new THREE.MeshStandardMaterial({color:0x37d6a7, emissive:0x37d6a7, emissiveIntensity:0.5}));
+  pump.position.y = 0.65;
+  group.add(canopy,p1,p2,pump);
+  group.position.set(laneX(lane),0,-95);
+  scene.add(group);
+  fuelStation = { mesh:group, lane };
+}
+function burst(x,y,z,color){
+  const geo=new THREE.SphereGeometry(0.06,4,4);
+  for(let i=0;i<8;i++){
+    const mesh=new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color }));
+    mesh.position.set(x,y,z); scene.add(mesh);
+    particles.push({ mesh, vx:(Math.random()-0.5)*6, vy:Math.random()*5, vz:(Math.random()-0.5)*6, life:0.5 });
+  }
+}
+
+function applyWeather(w){
+  rain.visible=false; stars.visible=false; scene.fog=null;
+  if(w==="sunny"){ scene.background=new THREE.Color(0x8fc7ff); hemi.intensity=1.0; sun.intensity=1.1; sun.color.set(0xfff2d8); }
+  else if(w==="rainy"){ scene.background=new THREE.Color(0x3a4250); scene.fog=new THREE.Fog(0x3a4250,20,95); hemi.intensity=0.55; sun.intensity=0.35; sun.color.set(0xaebbd0); rain.visible=true; }
+  else if(w==="foggy"){ scene.background=new THREE.Color(0xc3c9d1); scene.fog=new THREE.FogExp2(0xc3c9d1,0.045); hemi.intensity=0.85; sun.intensity=0.5; sun.color.set(0xffffff); }
+  else if(w==="night"){ scene.background=new THREE.Color(0x05060c); scene.fog=new THREE.Fog(0x05060c,15,110); hemi.intensity=0.22; sun.intensity=0.18; sun.color.set(0x8fa6ff); stars.visible=true; }
+}
+
+/* ============================================================
+   CAMERA
+============================================================ */
+let cameraMode="chase";
+const camPos = new THREE.Vector3(0,4.4,7.5);
+const camLook = new THREE.Vector3(0,1,-14);
+function updateCameraTarget(px){
+  if(cameraMode==="chase"){ camPos.set(px*0.45,4.4,7.6); camLook.set(px*0.3,1.0,-18); }
+  else { camPos.set(px,1.35,0.5); camLook.set(px,1.15,-18); }
+}
+function updateCameraTargetCity(px,pz,yaw){
+  const fx=Math.sin(yaw), fz=Math.cos(yaw);
+  if(cameraMode==="chase"){ camPos.set(px-fx*9,4.6,pz-fz*9); camLook.set(px+fx*10,1.0,pz+fz*10); }
+  else { camPos.set(px+fx*0.5,1.35,pz+fz*0.5); camLook.set(px+fx*14,1.15,pz+fz*14); }
+}
+
+/* ============================================================
+   ONLINE CITY WORLD
+============================================================ */
+let cityGroup=null, cityColliders=[], cityRoadLines=[], cityBound=90, npcCars=[], cityCoins=[];
+function buildCityWorld(){
+  if(cityGroup) return cityGroup;
+  cityGroup = new THREE.Group();
+  const gridN=5, blockSize=28, roadWidth=8;
+  cityBound = (gridN*(blockSize+roadWidth))/2;
+  const cityHalf = cityBound;
+
+  const cityGround = new THREE.Mesh(new THREE.PlaneGeometry(cityHalf*2+40, cityHalf*2+40), new THREE.MeshStandardMaterial({ color:0x1c2230, roughness:1 }));
+  cityGround.rotation.x=-Math.PI/2; cityGroup.add(cityGround);
+
+  const buildingMatPalette=[0x2a2b39,0x333449,0x24324a,0x3a2740,0x203044];
+  for(let ix=0; ix<gridN; ix++){
+    for(let iz=0; iz<gridN; iz++){
+      const cx = -cityHalf + ix*(blockSize+roadWidth) + blockSize/2 + roadWidth/2;
+      const cz = -cityHalf + iz*(blockSize+roadWidth) + blockSize/2 + roadWidth/2;
+      const blockMesh = new THREE.Mesh(new THREE.PlaneGeometry(blockSize,blockSize), new THREE.MeshStandardMaterial({ color:0x232838, roughness:1 }));
+      blockMesh.rotation.x=-Math.PI/2; blockMesh.position.set(cx,0.01,cz); cityGroup.add(blockMesh);
+      const nBuild = 1+Math.floor(Math.random()*2);
+      for(let b=0;b<nBuild;b++){
+        const w=6+Math.random()*8, d=6+Math.random()*8, h=4+Math.random()*14;
+        const bx = cx + (Math.random()-0.5)*(blockSize-w-4);
+        const bz = cz + (Math.random()-0.5)*(blockSize-d-4);
+        const mat = new THREE.MeshStandardMaterial({ color:buildingMatPalette[Math.floor(Math.random()*buildingMatPalette.length)], roughness:0.85 });
+        const mesh = new THREE.Mesh(buildGeo, mat);
+        mesh.scale.set(w,h,d); mesh.position.set(bx,h/2,bz);
+        cityGroup.add(mesh);
+        cityColliders.push({ x:bx, z:bz, hw:w/2+0.6, hd:d/2+0.6 });
+      }
+    }
+  }
+  const roadMat2 = new THREE.MeshStandardMaterial({ color:0x2b2d36, roughness:0.9 });
+  for(let i=0;i<=gridN;i++){
+    const linePos = -cityHalf + i*(blockSize+roadWidth);
+    const vMesh = new THREE.Mesh(new THREE.PlaneGeometry(roadWidth, cityHalf*2+roadWidth), roadMat2);
+    vMesh.rotation.x=-Math.PI/2; vMesh.position.set(linePos,0.015,0); cityGroup.add(vMesh);
+    const hMesh = new THREE.Mesh(new THREE.PlaneGeometry(cityHalf*2+roadWidth, roadWidth), roadMat2);
+    hMesh.rotation.x=-Math.PI/2; hMesh.position.set(0,0.015,linePos); cityGroup.add(hMesh);
+    cityRoadLines.push({ axis:"z", pos:linePos });
+    cityRoadLines.push({ axis:"x", pos:linePos });
+  }
+  scene.add(cityGroup); cityGroup.visible=false;
+  return cityGroup;
+}
+function buildNpcTraffic(){
+  npcCars.forEach(n=>scene.remove(n.mesh)); npcCars=[];
+  const palette=[0xff5a4e,0xffcf3d,0x8b7cf6,0x37d6a7];
+  for(let i=0;i<8;i++){
+    const line = cityRoadLines[Math.floor(Math.random()*cityRoadLines.length)];
+    const mesh = createCarMesh(palette[i%palette.length], false); scene.add(mesh);
+    const dir = Math.random()<0.5?1:-1;
+    npcCars.push({ mesh, axis:line.axis, fixed:line.pos, t:(Math.random()*2-1)*cityBound, dir, speed:6+Math.random()*4 });
+  }
+}
+function spawnCityCoin(){
+  const mesh = spawnCoinMesh();
+  mesh.position.set((Math.random()*2-1)*cityBound*0.85, 0.7, (Math.random()*2-1)*cityBound*0.85);
+  scene.add(mesh); cityCoins.push({ mesh });
+}
+function angleLerp(current,target,t){
+  let diff=target-current; while(diff>Math.PI) diff-=Math.PI*2; while(diff<-Math.PI) diff+=Math.PI*2;
+  return diff*Math.min(1,t);
+}
+
+/* ============================================================
+   NETWORKING — PeerJS over its free public broker.
+   No manual offer/answer pasting: host picks a short room code,
+   guest just types that code in. The broker (a third-party free
+   service, not something this file hosts) only relays the initial
+   handshake; game data still flows directly device-to-device.
+============================================================ */
+let peerObj=null, conn=null, isHost=false, peerReady=false, roomCode="";
+let matchMode="hotspot", matchAbort=false;
+const ROOM_PREFIX = "atishin-race-";
+const GLOBAL_PREFIX = "atishin-global-";
+const GLOBAL_SLOTS = 25;
+function randomRoomCode(){
+  const chars="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let s=""; for(let i=0;i<4;i++) s+=chars[Math.floor(Math.random()*chars.length)];
+  return s;
+}
+function setupConn(c){
+  conn = c;
+  conn.on("open", ()=>{ peerReady=true; onPeerConnected(); });
+  conn.on("close", ()=>{ peerReady=false; });
+  conn.on("data", data=>{ handleNetMessage(data); });
+}
+function sendNet(obj){ if(conn && conn.open) conn.send(obj); }
+
+/* ---- hotspot (local, code-based) ---- */
+function attemptHostId(){
+  roomCode = randomRoomCode();
+  $("hostRoomCode").textContent = roomCode;
+  $("hostStatus").textContent = "در حال ساخت گروه...";
+  if(peerObj){ try{ peerObj.destroy(); }catch(e){} }
+  peerObj = new Peer(ROOM_PREFIX+roomCode);
+  peerObj.on("open", ()=>{ $("hostStatus").textContent = "کد رو به دوستت بگو، منتظر وصل‌شدنشیم..."; });
+  peerObj.on("connection", c=> setupConn(c));
+  peerObj.on("error", err=>{
+    if(err.type==="unavailable-id"){ attemptHostId(); }
+    else { $("hostStatus").textContent = "مشکلی تو اتصال بود (شاید اینترنت لازمه). دوباره امتحان کن."; }
+  });
+}
+function hostCreateRoom(){ matchMode="hotspot"; isHost=true; attemptHostId(); }
+function guestJoinRoom(code){
+  matchMode="hotspot"; isHost=false;
+  if(peerObj){ try{ peerObj.destroy(); }catch(e){} }
+  peerObj = new Peer();
+  peerObj.on("open", ()=>{
+    $("guestStatus").textContent = "در حال اتصال...";
+    const c = peerObj.connect(ROOM_PREFIX+code.toUpperCase());
+    setupConn(c);
+  });
+  peerObj.on("error", ()=>{ $("guestStatus").textContent = "وصل نشد. کد رو چک کن یا دوباره امتحان کن."; });
+}
+
+/* ---- global (worldwide, automatic slot matchmaking — no backend, best-effort) ---- */
+function globalFindMatch(){
+  matchMode="global"; matchAbort=false; isHost=false;
+  $("globalStatus").textContent = "در حال جستجوی حریف در سراسر دنیا...";
+  tryGuestSlot(1);
+}
+function tryGuestSlot(n){
+  if(matchAbort) return;
+  if(n>GLOBAL_SLOTS){ becomeGlobalHost(1); return; }
+  const probe = new Peer();
+  let settled=false;
+  const giveUp = ()=>{ if(settled) return; settled=true; try{probe.destroy();}catch(e){} if(!matchAbort) tryGuestSlot(n+1); };
+  probe.on("open", ()=>{
+    if(matchAbort){ probe.destroy(); return; }
+    const c = probe.connect(GLOBAL_PREFIX+n, { reliable:true });
+    const to = setTimeout(giveUp, 1800);
+    c.on("open", ()=>{
+      if(settled || matchAbort) return; settled=true; clearTimeout(to);
+      peerObj = probe; isHost=false; setupConn(c);
+    });
+    c.on("error", ()=>{ clearTimeout(to); giveUp(); });
+  });
+  probe.on("error", giveUp);
+}
+function becomeGlobalHost(n){
+  if(matchAbort) return;
+  if(n>GLOBAL_SLOTS){ $("globalStatus").textContent="الان کسی آنلاین نیست، چند لحظه دیگه دوباره امتحان کن."; return; }
+  const hp = new Peer(GLOBAL_PREFIX+n);
+  hp.on("open", ()=>{
+    if(matchAbort){ hp.destroy(); return; }
+    peerObj = hp; isHost=true;
+    $("globalStatus").textContent = "منتظر یک حریف از سراسر دنیا...";
+    hp.on("connection", c=>{
+      if(peerReady){ c.close(); return; }
+      setupConn(c);
+    });
+  });
+  hp.on("error", err=>{
+    if(err.type==="unavailable-id"){ becomeGlobalHost(n+1); }
+    else { $("globalStatus").textContent="مشکلی پیش اومد، دوباره امتحان کن."; }
+  });
+}
+
+function onPeerConnected(){
+  if(matchMode==="global"){
+    if(isHost){ $("globalStatus").textContent="✅ یه حریف پیدا شد! برای شروع دکمه رو بزن."; $("globalStartBtn").style.display="inline-block"; $("globalStartBtn").disabled=false; }
+    else{ $("globalStatus").textContent="✅ وصل شدی! منتظر بمون تا طرف مقابل بازی رو شروع کنه..."; }
+  } else {
+    if(isHost){ $("hostStatus").textContent="✅ دوستت وصل شد!"; $("hostStartBtn").style.display="inline-block"; $("hostStartBtn").disabled=false; }
+    else{ $("guestStatus").textContent="✅ وصل شدی! منتظر بمون تا میزبان بازی رو شروع کنه..."; }
+  }
+}
+function handleNetMessage(msg){
+  if(!msg) return;
+  if(msg.type==="start" && !isHost){ beginOnlineSession(false); }
+  else if(msg.type==="pos"){ remoteTarget.x=msg.x; remoteTarget.z=msg.z; remoteTarget.yaw=msg.yaw; }
+  else if(msg.type==="bye"){ toast("طرف مقابل از بازی خارج شد"); }
+}
+function resetOnlineScreenUI(){
+  $("connModeChoose").classList.remove("hidden");
+  $("onlineChoose").classList.add("hidden");
+  $("hostPanel").classList.add("hidden");
+  $("guestPanel").classList.add("hidden");
+  $("globalPanel").classList.add("hidden");
+  $("hostRoomCode").textContent="----";
+  $("hostStartBtn").style.display="none"; $("hostStartBtn").disabled=true;
+  $("hostStatus").textContent="در حال ساخت گروه..."; $("guestStatus").textContent="";
+  $("guestCodeInput").value="";
+  $("globalStartBtn").style.display="none"; $("globalStartBtn").disabled=true;
+  $("globalStatus").textContent="در حال جستجوی حریف...";
+}
+function cleanupConnection(){
+  matchAbort=true;
+  try{ if(conn && conn.open) sendNet({type:"bye"}); }catch(e){}
+  try{ if(peerObj) peerObj.destroy(); }catch(e){}
+  peerObj=null; conn=null; peerReady=false; isHost=false; roomCode="";
+  resetOnlineScreenUI();
+}
+$("pickHotspotBtn").onclick = ()=>{
+  if(!window.Peer){ toast("این مرورگر از آنلاین پشتیبانی نمی‌کنه"); return; }
+  $("connModeChoose").classList.add("hidden"); $("onlineChoose").classList.remove("hidden");
+};
+$("pickGlobalBtn").onclick = ()=>{
+  if(!window.Peer){ toast("این مرورگر از آنلاین پشتیبانی نمی‌کنه"); return; }
+  $("connModeChoose").classList.add("hidden"); $("globalPanel").classList.remove("hidden");
+  globalFindMatch();
+};
+$("globalCancelBtn").onclick = ()=>{ cleanupConnection(); };
+$("globalStartBtn").onclick = ()=>{ sendNet({type:"start"}); beginOnlineSession(true); };
+$("hostCreateBtn").onclick = ()=>{
+  $("onlineChoose").classList.add("hidden"); $("hostPanel").classList.remove("hidden");
+  hostCreateRoom();
+};
+$("guestJoinShowBtn").onclick = ()=>{
+  $("onlineChoose").classList.add("hidden"); $("guestPanel").classList.remove("hidden");
+};
+$("guestJoinBtn").onclick = ()=>{
+  const code = $("guestCodeInput").value.trim();
+  if(code.length<4){ toast("کد ۴ کاراکتری رو کامل وارد کن"); return; }
+  guestJoinRoom(code);
+};
+$("hostStartBtn").onclick = ()=>{ sendNet({type:"start"}); beginOnlineSession(true); };
+
+/* ============================================================
+   GAME VARIABLES
+============================================================ */
+let laneIdx=1, carX=0, targetX=0;
+let speed=14, distance=0, coinsRun=0, elapsed=0;
+let spawnTimer=0, coinTimer=0;
+let nitro=100, nitroActive=false;
+let lastT=0;
+let onlineVelocity=0, onlineYaw=0, playerPosX=0, playerPosZ=0;
+let steerInput=0, throttleInput=0, netSendTimer=0;
+let remoteTarget = { x:0, z:0, yaw:0 };
+const keysHeld = new Set();
+let gasHeld=false, brakeHeld=false;
+let needsFuel=false, fuelStopsUsed=0, fuelStation=null, nearStation=false;
+const FUEL_TIMES = [600, 1200]; // ثانیه — دوبار در هر مرحله
+
+function resetWorldEntities(){
+  obstacles.forEach(o=>scene.remove(o.mesh)); obstacles=[];
+  pickups.forEach(p=>scene.remove(p.mesh)); pickups=[];
+  particles.forEach(p=>scene.remove(p.mesh)); particles=[];
+  if(fuelStation){ scene.remove(fuelStation.mesh); fuelStation=null; }
+  needsFuel=false; nearStation=false; $("refuelBtn").classList.add("hidden");
+}
+
+/* ---- SOLO MODE START ---- */
+function startGame(){
+  resize(); resetWorldEntities();
+  cleanupConnection();
+  if(cityGroup) cityGroup.visible=false;
+  roadWorldGroup.visible=true; remoteCar.visible=false;
+
+  laneIdx=1; carX=laneX(1); targetX=carX;
+  speed=0; distance=0; coinsRun=0; elapsed=0; spawnTimer=0.4; coinTimer=0.8;
+  nitro=100; nitroActive=false;
+  fuelStopsUsed=0; needsFuel=false; nearStation=false;
+  gasHeld=false; brakeHeld=false;
+  tlState="green"; tlTimer=TL_CYCLE.green; applyTrafficLightVisual();
+  if(trafficLight) trafficLight.mesh.position.z=-110;
+  cameraMode="chase"; headlightsOn=true;
+  $("camBtn").classList.add("on"); $("lightBtn").classList.add("on");
+
+  scene.remove(playerCar);
+  playerCar = createCarMesh(COLORS[state.selectedColor].hex, COLORS[state.selectedColor].glow);
+  scene.add(playerCar);
+
+  applyWeather(state.weather);
+  state.paused=false; $("pauseBtn").textContent="⏸";
+  showScreen("playing");
+  lastT = performance.now();
+  requestAnimationFrame(loop);
+}
+
+/* ---- ONLINE MODE START ---- */
+function beginOnlineSession(hostFlag){
+  isHost = hostFlag;
+  resetWorldEntities();
+  buildCityWorld();
+  roadWorldGroup.visible=false; cityGroup.visible=true;
+  applyWeather("sunny");
+
+  scene.remove(playerCar);
+  playerCar = createCarMesh(COLORS[state.selectedColor].hex, COLORS[state.selectedColor].glow);
+  scene.add(playerCar);
+  remoteCar.visible = true;
+
+  playerPosX = hostFlag ? -20 : 20; playerPosZ = hostFlag ? -20 : 20;
+  onlineYaw = hostFlag ? 0 : Math.PI;
+  onlineVelocity=0; steerInput=0; throttleInput=0;
+  remoteTarget = { x: hostFlag?20:-20, z: hostFlag?20:-20, yaw: hostFlag?Math.PI:0 };
+  remoteCar.position.set(remoteTarget.x,0,remoteTarget.z);
+
+  nitro=100; nitroActive=false; distance=0; coinsRun=0; elapsed=0; netSendTimer=0;
+  cameraMode="chase"; headlightsOn=true;
+  $("camBtn").classList.add("on"); $("lightBtn").classList.add("on");
+
+  buildNpcTraffic();
+  cityCoins.forEach(c=>scene.remove(c.mesh)); cityCoins=[];
+
+  state.paused=false; $("pauseBtn").textContent="⏸";
+  showScreen("playing");
+  lastT = performance.now();
+  requestAnimationFrame(loop);
+}
+
+function togglePause(){
+  if(state.screen!=="playing") return;
+  state.paused=!state.paused; $("pauseBtn").textContent = state.paused?"▶":"⏸";
+  if(!state.paused){ lastT=performance.now(); requestAnimationFrame(loop); }
+}
+function flashScreen(){ const f=$("flash"); f.style.transition="none"; f.style.opacity="0.55"; requestAnimationFrame(()=>{ f.style.transition="opacity .35s ease"; f.style.opacity="0"; }); }
+function finishGame(){
+  state.coins += coinsRun; state.best = Math.max(state.best, Math.round(distance));
+  $("overScore").textContent = Math.round(distance)+" متر"; $("overCoins").textContent = coinsRun; $("overBest").textContent = state.best+" متر";
+  $("overTitle").innerHTML = "برخورد <span>کردی!</span>";
+  sfx.crash(); vibrate([100,50,100]); flashScreen(); resetWorldEntities();
+  setTimeout(()=> showScreen("over"), 260);
+}
+
+/* ============================================================
+   INPUT
+============================================================ */
+function setLane(l){ laneIdx=Math.max(0,Math.min(LANES-1,l)); targetX=laneX(laneIdx); }
+function setFreeX(x){
+  targetX = Math.max(-FREE_HALF_WIDTH, Math.min(FREE_HALF_WIDTH, x));
+  laneIdx = Math.max(0, Math.min(LANES-1, Math.round(targetX/LANE_W)+1));
+}
+renderer3d.domElement.addEventListener("pointerdown", handlePointer);
+renderer3d.domElement.addEventListener("pointermove", e=>{ if(e.buttons) handlePointer(e); });
+function handlePointer(e){
+  if(state.screen!=="playing" || state.paused || state.mode==="online") return;
+  const rect = renderer3d.domElement.getBoundingClientRect();
+  const rel = (e.clientX-rect.left)/rect.width;
+  if(rel<1/3) setLane(0); else if(rel<2/3) setLane(1); else setLane(2);
+}
+window.addEventListener("keydown", e=>{
+  keysHeld.add(e.key);
+  if(state.screen!=="playing") return;
+  if(state.paused){ if(e.key==="p"||e.key==="P") togglePause(); return; }
+  if(state.mode!=="online"){
+    if(e.key==="ArrowLeft"||e.key==="a"||e.key==="A") setLane(laneIdx-1);
+    if(e.key==="ArrowRight"||e.key==="d"||e.key==="D") setLane(laneIdx+1);
+  }
+  if(e.key==="c"||e.key==="C") toggleCamera();
+  if(e.key==="l"||e.key==="L") toggleHeadlights();
+  if(e.key==="Shift") activateNitro();
+  if(e.key==="p"||e.key==="P") togglePause();
+});
+window.addEventListener("keyup", e=> keysHeld.delete(e.key));
+
+function toggleCamera(){ cameraMode = cameraMode==="chase"?"cockpit":"chase"; $("camBtn").classList.toggle("on", cameraMode==="chase"); sfx.click(); }
+function toggleHeadlights(){ headlightsOn=!headlightsOn; $("lightBtn").classList.toggle("on", headlightsOn); sfx.click(); }
+function activateNitro(){ if(nitro<25||nitroActive||needsFuel) return; nitroActive=true; sfx.nitro(); vibrate(30); }
+$("camBtn").onclick = toggleCamera; $("lightBtn").onclick = toggleHeadlights; $("nitroBtn").onclick = activateNitro; $("pauseBtn").onclick = togglePause;
+
+/* manual gas/brake buttons (solo/offline) */
+function bindHold(el, onDown, onUp){
+  el.addEventListener("pointerdown", e=>{ try{el.setPointerCapture(e.pointerId);}catch(err){} onDown(); });
+  el.addEventListener("pointerup", onUp);
+  el.addEventListener("pointercancel", onUp);
+  el.addEventListener("pointerleave", onUp);
+}
+bindHold($("btnGas"), ()=>gasHeld=true, ()=>gasHeld=false);
+bindHold($("btnBrake"), ()=>brakeHeld=true, ()=>brakeHeld=false);
+
+/* steering wheel (replaces the left/right buttons, solo/offline mobile control) */
+const wheelEl = $("wheelControl");
+const wheelSvg = $("wheelSvg");
+const WHEEL_FREE_SENSITIVITY = 0.024; // px of drag -> world units of lateral movement
+let wheelDragging=false, wheelStartX=0, wheelAngle=0, wheelStartTargetX=0;
+wheelEl.addEventListener("pointerdown", e=>{
+  if(state.screen!=="playing" || state.mode==="online") return;
+  wheelDragging=true; wheelStartX=e.clientX; wheelStartTargetX=targetX;
+  try{ wheelEl.setPointerCapture(e.pointerId); }catch(err){}
+});
+wheelEl.addEventListener("pointermove", e=>{
+  if(!wheelDragging) return;
+  const dx = e.clientX-wheelStartX;
+  wheelAngle = Math.max(-60, Math.min(60, dx*1.4));
+  wheelSvg.style.transform = `rotate(${wheelAngle}deg)`;
+  if(state.screen==="playing" && state.mode!=="online"){
+    setFreeX(wheelStartTargetX + dx*WHEEL_FREE_SENSITIVITY);
+  }
+});
+function wheelRelease(){
+  wheelDragging=false; wheelAngle=0; wheelSvg.style.transform="rotate(0deg)";
+}
+wheelEl.addEventListener("pointerup", wheelRelease);
+wheelEl.addEventListener("pointercancel", wheelRelease);
+wheelEl.addEventListener("pointerleave", wheelRelease);
+
+
+/* ---- FUEL CARD + REFUEL ---- */
+let fuelModalMode = "setup";
+function fuelCardStatusText(){
+  return state.fuelCardPin ? "کارت فعاله ✅ — برای عوض کردن، رمز جدید بذار." : "هنوز کارتی نساختی. یه رمز ۴ رقمی انتخاب کن.";
+}
+function openFuelModal(mode){
+  fuelModalMode = mode;
+  $("fuelModalInput").value = "";
+  if(mode==="setup"){
+    $("fuelModalTitle").textContent = "کارت سوخت";
+    $("fuelModalBody").textContent = fuelCardStatusText();
+    $("fuelModalOk").textContent = "ذخیره";
+  } else {
+    $("fuelModalTitle").textContent = "زدن سوخت";
+    $("fuelModalBody").textContent = "رمز کارت سوختت رو وارد کن:";
+    $("fuelModalOk").textContent = "تایید";
+  }
+  $("fuelModal").classList.remove("hidden");
+}
+function closeFuelModal(){ $("fuelModal").classList.add("hidden"); }
+$("fuelCardBtnMenu").onclick = ()=> openFuelModal("setup");
+$("fuelModalCancel").onclick = closeFuelModal;
+$("fuelModalOk").onclick = ()=>{
+  const val = $("fuelModalInput").value.trim();
+  if(fuelModalMode==="setup"){
+    if(!/^\d{4}$/.test(val)){ toast("رمز باید ۴ رقم باشه"); return; }
+    state.fuelCardPin = val;
+    toast("رمز کارت سوخت ذخیره شد ✅");
+    closeFuelModal();
+  } else {
+    if(!state.fuelCardPin){ toast("اول از منو یه کارت سوخت بساز"); closeFuelModal(); return; }
+    if(val===state.fuelCardPin){
+      needsFuel=false; fuelStopsUsed=Math.min(2,fuelStopsUsed+1);
+      if(fuelStation){ scene.remove(fuelStation.mesh); fuelStation=null; }
+      nearStation=false; $("refuelBtn").classList.add("hidden");
+      toast("باک پر شد ⛽");
+      closeFuelModal();
+    } else {
+      toast("رمز اشتباهه ❌");
+    }
+  }
+};
+$("refuelBtn").onclick = ()=>{
+  if(!needsFuel){ toast("باک پر است ⛽"); return; }
+  if(!state.fuelCardPin){ toast("اول از منو یه کارت سوخت بساز"); return; }
+  openFuelModal("verify");
+};
+
+/* joystick (online + mobile) */
+const joyBase = $("joyBase"), joyKnob = $("joyKnob");
+let joyActive=false, joyCenter={x:0,y:0};
+function joyPoint(e){ return e.touches? e.touches[0] : e; }
+function joyStart(e){ joyActive=true; const r=joyBase.getBoundingClientRect(); joyCenter={x:r.left+r.width/2,y:r.top+r.height/2}; joyMove(e); }
+function joyMove(e){
+  if(!joyActive) return;
+  const p = joyPoint(e); let dx=p.clientX-joyCenter.x, dy=p.clientY-joyCenter.y;
+  const max=40; const dist=Math.min(max, Math.hypot(dx,dy)); const ang=Math.atan2(dy,dx);
+  dx=Math.cos(ang)*dist; dy=Math.sin(ang)*dist;
+  joyKnob.style.transform = `translate(${dx}px,${dy}px)`;
+  steerInput = dx/max; throttleInput = -dy/max;
+}
+function joyEnd(){ joyActive=false; joyKnob.style.transform="translate(0,0)"; steerInput=0; throttleInput=0; }
+joyBase.addEventListener("pointerdown", e=>{ try{joyBase.setPointerCapture(e.pointerId);}catch(err){} joyStart(e); });
+joyBase.addEventListener("pointermove", joyMove);
+joyBase.addEventListener("pointerup", joyEnd);
+joyBase.addEventListener("pointercancel", joyEnd);
+
+/* ============================================================
+   MAIN LOOP
+============================================================ */
+function loop(t){
+  if(state.screen!=="playing" || state.paused) return;
+  let dt = Math.min(0.033, (t-lastT)/1000); lastT=t;
+  if(state.mode==="online") updateOnline(dt); else updateSolo(dt);
+  render();
+  requestAnimationFrame(loop);
+}
+
+function updateSolo(dt){
+  elapsed += dt;
+
+  if(!needsFuel && fuelStopsUsed<2 && elapsed>=FUEL_TIMES[fuelStopsUsed]){
+    needsFuel = true;
+    toast("بنزین تموم شد! به جایگاه سوخت برو ⛽");
+    spawnFuelStation();
+  }
+
+  const carScale = CARS[state.selectedCar].speed;
+  const maxSpeed = 26*carScale;
+  const accel = 16;
+  const computerHeld = state.controlScheme==="computer";
+  const brakeNow = brakeHeld || (computerHeld && (keysHeld.has("ArrowDown")||keysHeld.has("s")||keysHeld.has("S")));
+  const gasNow = !needsFuel && (gasHeld || (computerHeld && (keysHeld.has("ArrowUp")||keysHeld.has("w")||keysHeld.has("W"))));
+  let effMax = maxSpeed;
+  if(nitroActive && !needsFuel){ effMax*=1.6; nitro=Math.max(0,nitro-dt*45); if(nitro<=0) nitroActive=false; }
+  else nitro=Math.min(100,nitro+dt*6);
+  if(gasNow) speed = Math.min(effMax, speed+accel*dt);
+  else if(brakeNow) speed = Math.max(0, speed-accel*1.8*dt);
+  else speed = Math.max(0, speed-accel*0.5*dt);
+  distance += speed*dt;
+
+  carX += (targetX-carX)*Math.min(1,dt*9);
+  playerCar.position.set(carX,0,0);
+  playerCar.rotation.z = (targetX-carX)*0.12;
+  playerCar.rotation.y = Math.PI;
+
+  headlightL.position.set(carX-0.55,0.65,1.4); headlightR.position.set(carX+0.55,0.65,1.4);
+  hlTargetL.position.set(carX-0.55,0,-18); hlTargetR.position.set(carX+0.55,0,-18);
+  headlightL.visible=headlightsOn; headlightR.visible=headlightsOn;
+
+  roadTex.offset.y += speed*dt*0.045;
+
+  spawnTimer -= dt; if(spawnTimer<=0){ spawnObstacle(); spawnTimer=Math.max(0.55,1.2-elapsed*0.01); }
+  coinTimer -= dt; if(coinTimer<=0){ spawnCoin(); coinTimer=0.8+Math.random()*0.7; }
+
+  if(fuelStation){
+    fuelStation.mesh.position.z += speed*dt;
+    const dz = Math.abs(fuelStation.mesh.position.z-0);
+    nearStation = needsFuel && fuelStation.lane===laneIdx && dz<3 && speed<2;
+    $("refuelBtn").classList.toggle("hidden", !nearStation);
+    if(fuelStation.mesh.position.z>12){
+      scene.remove(fuelStation.mesh); fuelStation=null;
+      if(needsFuel) spawnFuelStation();
+    }
+  }
+
+  if(trafficLight){
+    trafficLight.mesh.position.z += speed*dt;
+    if(trafficLight.mesh.position.z>12) trafficLight.mesh.position.z = -110;
+  }
+  tlTimer -= dt;
+  if(tlTimer<=0){ tlState = tlState==="green"?"red":"green"; tlTimer = TL_CYCLE[tlState]; applyTrafficLightVisual(); }
+
+  obstacles.forEach(o=>{
+    o.mesh.position.z += (speed-o.ownSpeed)*dt;
+    o.mesh.position.x += (o.targetLaneX-o.mesh.position.x)*Math.min(1,dt*4);
+    o.mesh.rotation.y=Math.PI;
+    if(o.switchCooldown>0) o.switchCooldown -= dt;
+  });
+  { // when a car catches up to the one in front of it, let it change lane instead of just stacking up
+    const MIN_GAP = 3.7;
+    const laneFree = (lane,zPos,exclude)=> !obstacles.some(o=> o!==exclude && o.lane===lane && Math.abs(o.mesh.position.z-zPos) < MIN_GAP);
+    for(let lane=0; lane<LANES; lane++){
+      const laneCars = obstacles.filter(o=>o.lane===lane).sort((a,b)=>a.mesh.position.z-b.mesh.position.z);
+      for(let i=1;i<laneCars.length;i++){
+        const prev=laneCars[i-1], cur=laneCars[i];
+        if(cur.mesh.position.z - prev.mesh.position.z < MIN_GAP){
+          let switched=false;
+          if(cur.switchCooldown<=0){
+            const candidates=[cur.lane-1, cur.lane+1].filter(l=>l>=0 && l<LANES);
+            for(const cand of candidates){
+              if(laneFree(cand, cur.mesh.position.z, cur)){
+                cur.lane=cand; cur.targetLaneX=laneX(cand); cur.switchCooldown=1.2; switched=true; break;
+              }
+            }
+          }
+          if(!switched) cur.mesh.position.z = prev.mesh.position.z + MIN_GAP;
+        }
+      }
+    }
+  }
+  if(trafficLight && tlState==="red"){ // cars queue behind the red light instead of driving through it
+    const stopZ = trafficLight.mesh.position.z - 2.4;
+    obstacles.forEach(o=>{ if(o.mesh.position.z > stopZ && o.mesh.position.z < trafficLight.mesh.position.z) o.mesh.position.z = stopZ; });
+  }
+  obstacles = obstacles.filter(o=>{ if(o.mesh.position.z>10){ scene.remove(o.mesh); return false; } return true; });
+
+  pickups.forEach(p=>{ p.mesh.position.z += speed*dt; p.mesh.rotation.z += dt*4; });
+  pickups = pickups.filter(p=>{
+    if(p.mesh.position.z>10){ scene.remove(p.mesh); return false; }
+    if(Math.abs(p.mesh.position.z-0)<1.6 && p.lane===laneIdx){
+      coinsRun+=5; sfx.coin(); vibrate(15); burst(p.mesh.position.x,0.8,0,0xffb020); scene.remove(p.mesh); return false;
+    }
+    return true;
+  });
+
+  buildings.forEach(b=>{ b.position.z += speed*dt; if(b.position.z>20){ b.position.z -= 26*9; b.position.x += (Math.random()-0.5)*1.5; } });
+
+  if(rain.visible){
+    const arr = rain.geometry.attributes.position.array;
+    for(let i=0;i<rainCount;i++){
+      arr[i*3+1] -= dt*22; arr[i*3+2] += speed*dt*0.6;
+      if(arr[i*3+1]<0){ arr[i*3+1]=10; arr[i*3]=carX+(Math.random()-0.5)*20; arr[i*3+2]=-30-Math.random()*20; }
+    }
+    rain.geometry.attributes.position.needsUpdate = true;
+  }
+
+  particles.forEach(p=>{ p.mesh.position.x+=p.vx*dt; p.mesh.position.y+=p.vy*dt; p.mesh.position.z+=p.vz*dt; p.vy-=dt*9; p.life-=dt; p.mesh.material.transparent=true; p.mesh.material.opacity=Math.max(0,p.life/0.5); });
+  particles = particles.filter(p=>{ if(p.life<=0){ scene.remove(p.mesh); return false; } return true; });
+
+  for(const o of obstacles){
+    if(o.lane===laneIdx && Math.abs(o.mesh.position.z-0)<1.7){ finishGame(); return; }
+  }
+
+  updateCameraTarget(carX);
+  $("hudScore").textContent = Math.round(distance);
+  $("hudCoins").textContent = state.coins+coinsRun;
+  $("hudSpeed").textContent = Math.round(speed*3.6);
+  $("nitroBtn").disabled = nitro<25;
+}
+
+function updateOnline(dt){
+  elapsed += dt;
+  if(state.controlScheme==="computer"){
+    steerInput = (keysHeld.has("ArrowRight")||keysHeld.has("d")||keysHeld.has("D")?1:0) - (keysHeld.has("ArrowLeft")||keysHeld.has("a")||keysHeld.has("A")?1:0);
+    throttleInput = (keysHeld.has("ArrowUp")||keysHeld.has("w")||keysHeld.has("W")?1:0) - (keysHeld.has("ArrowDown")||keysHeld.has("s")||keysHeld.has("S")?1:0);
+  }
+  const carScale = CARS[state.selectedCar].speed;
+  let maxSpeed = 20*carScale;
+  if(nitroActive){ maxSpeed*=1.6; nitro=Math.max(0,nitro-dt*45); if(nitro<=0) nitroActive=false; } else nitro=Math.min(100,nitro+dt*6);
+
+  const accel=16;
+  if(Math.abs(throttleInput)>0.04) onlineVelocity += accel*dt*throttleInput;
+  else onlineVelocity -= Math.sign(onlineVelocity)*Math.min(Math.abs(onlineVelocity), accel*0.7*dt);
+  onlineVelocity = Math.max(-maxSpeed*0.4, Math.min(maxSpeed, onlineVelocity));
+
+  const turnFactor = Math.min(1, Math.abs(onlineVelocity)/5);
+  onlineYaw += steerInput*1.9*dt*turnFactor*(onlineVelocity<0?-1:1);
+
+  const fx=Math.sin(onlineYaw), fz=Math.cos(onlineYaw);
+  let nx = playerPosX + fx*onlineVelocity*dt;
+  let nz = playerPosZ + fz*onlineVelocity*dt;
+
+  const carR = 1.35;
+  cityColliders.forEach(c=>{
+    const cxp = Math.max(c.x-c.hw, Math.min(c.x+c.hw, nx));
+    const czp = Math.max(c.z-c.hd, Math.min(c.z+c.hd, nz));
+    const dx=nx-cxp, dz=nz-czp; const d=Math.hypot(dx,dz);
+    if(d<carR && d>0.0001){ const push=(carR-d); nx+=dx/d*push; nz+=dz/d*push; onlineVelocity*=0.5; }
+  });
+  npcCars.forEach(n=>{
+    const dx=nx-n.mesh.position.x, dz=nz-n.mesh.position.z; const d=Math.hypot(dx,dz); const minD=carR+1.3;
+    if(d<minD && d>0.0001){ const push=(minD-d); nx+=dx/d*push; nz+=dz/d*push; onlineVelocity*=0.4; }
+  });
+  if(remoteCar.visible){
+    const dx=nx-remoteCar.position.x, dz=nz-remoteCar.position.z; const d=Math.hypot(dx,dz); const minD=carR*2;
+    if(d<minD && d>0.0001){ const push=(minD-d); nx+=dx/d*push*0.5; nz+=dz/d*push*0.5; onlineVelocity*=0.5; }
+  }
+  nx = Math.max(-cityBound,Math.min(cityBound,nx));
+  nz = Math.max(-cityBound,Math.min(cityBound,nz));
+  playerPosX=nx; playerPosZ=nz;
+  playerCar.position.set(playerPosX,0,playerPosZ);
+  playerCar.rotation.y = onlineYaw; playerCar.rotation.z=0;
+
+  headlightL.position.set(playerPosX+fx*0.9-fz*0.4, 0.65, playerPosZ+fz*0.9+fx*0.4);
+  headlightR.position.set(playerPosX+fx*0.9+fz*0.4, 0.65, playerPosZ+fz*0.9-fx*0.4);
+  hlTargetL.position.set(playerPosX+fx*15,0,playerPosZ+fz*15);
+  hlTargetR.position.set(playerPosX+fx*15,0,playerPosZ+fz*15);
+  headlightL.visible=headlightsOn; headlightR.visible=headlightsOn;
+
+  npcCars.forEach(n=>{
+    n.t += n.dir*n.speed*dt;
+    if(n.t>cityBound){ n.t=cityBound; n.dir=-1; } if(n.t<-cityBound){ n.t=-cityBound; n.dir=1; }
+    if(n.axis==="x"){ n.mesh.position.set(n.t,0,n.fixed); n.mesh.rotation.y = n.dir>0? Math.PI/2 : -Math.PI/2; }
+    else { n.mesh.position.set(n.fixed,0,n.t); n.mesh.rotation.y = n.dir>0? Math.PI : 0; }
+  });
+
+  particles.forEach(p=>{ p.mesh.position.x+=p.vx*dt; p.mesh.position.y+=p.vy*dt; p.mesh.position.z+=p.vz*dt; p.vy-=dt*9; p.life-=dt; p.mesh.material.transparent=true; p.mesh.material.opacity=Math.max(0,p.life/0.5); });
+  particles = particles.filter(p=>{ if(p.life<=0){ scene.remove(p.mesh); return false; } return true; });
+
+  netSendTimer -= dt;
+  if(netSendTimer<=0 && peerReady){ sendNet({type:"pos", x:playerPosX, z:playerPosZ, yaw:onlineYaw}); netSendTimer=0.08; }
+
+  remoteCar.position.x += (remoteTarget.x-remoteCar.position.x)*Math.min(1,dt*10);
+  remoteCar.position.z += (remoteTarget.z-remoteCar.position.z)*Math.min(1,dt*10);
+  remoteCar.rotation.y += angleLerp(remoteCar.rotation.y, remoteTarget.yaw, dt*10);
+
+  distance += Math.abs(onlineVelocity)*dt;
+  updateCameraTargetCity(playerPosX, playerPosZ, onlineYaw);
+  $("hudScore").textContent = Math.round(distance);
+  $("hudCoins").textContent = state.coins+coinsRun;
+  $("hudSpeed").textContent = Math.round(Math.abs(onlineVelocity)*3.6);
+  $("nitroBtn").disabled = nitro<25;
+}
+
+function render(){
+  camera.position.lerp(camPos, 0.18);
+  camera.lookAt(camLook);
+  playerCar.visible = cameraMode!=="cockpit";
+  renderer3d.render(scene, camera);
+}
+
+/* ============================================================
+   INIT
+============================================================ */
+resize();
+applyWeather("sunny");
+updateCameraTarget(0); camera.position.copy(camPos); camera.lookAt(camLook);
+showScreen("menu");
+})();
+</script>
+</body>
+</html>
